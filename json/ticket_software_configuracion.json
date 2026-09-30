@@ -1,0 +1,67 @@
+{
+  "_comentario": "Ejemplo de Ticket con Tipificación 'Software / Configuración' (Instalación de paquetes, licencias Office/Teams, Outlook, configuración de perfiles, token corporativo, accesos)",
+  "origen_remedy": {
+    "formulario_remedy": "WOI:WorkOrder",
+    "endpoint_api": "/api/arsys/v1/entry/WOI:WorkOrder",
+    "tipo_ticket": "WO",
+    "grupo_asignado": "MESA DE AYUDA Y ATENCION A USUARIOS"
+  },
+  "remedy_raw_api_values": {
+    "Work Order ID": "WO0000000552194",
+    "Detailed Description": "Ticket generado automáticamente por Asistente Virtual Jarvis (Chatbot)\nPara el usuario: Florencia Daiana Gimenez\nEmail: fgimenez@subsidiaria.com\nUbicación: Sede San Martin\nDetalle: La colaboradora requiere instalación de software cliente SQL Developer y configuración de certificado y token digital para firma electrónica. Presenta error de permisos en Windows al intentar descargar librerías necesarias.",
+    "Summary": "Instalación de software de base de datos y configuración de token digital",
+    "Submit Date": "2024-04-25T11:45:00.000+0000",
+    "Completed Date": "2024-04-25T15:10:20.000+0000",
+    "Status": "Completed",
+    "Status_Reason": "Completado Exitosamente",
+    "Priority": "Medium",
+    "Customer First Name": "Florencia Daiana",
+    "Customer Last Name": "Gimenez",
+    "Submitter": "jarvis",
+    "Reported Source": "Jarvis Bot",
+    "ASGRP": "MESA DE AYUDA Y ATENCION A USUARIOS",
+    "Company": "SUBSIDIARIA B",
+    "Resolution": "Se instaló SQL Developer 23.1 mediante SCCM corporativo y se configuraron credenciales y token correctamente en el almacén de certificados."
+  },
+  "registro_almacenado_en_base_datos": {
+    "case_id": "WO0000000552194",
+    "ticket_type": "WO",
+    "summary": "Instalación de software de base de datos y configuración de token digital",
+    "description": "Ticket generado automáticamente por Asistente Virtual Jarvis (Chatbot) Para el usuario: Florencia Daiana Gimenez Email: fgimenez@subsidiaria.com...",
+    "submit_date": "2024-04-25 11:45:00",
+    "submit_month": "2024-04",
+    "last_modified_date": "2024-04-25 15:10:20",
+    "status": "Completed",
+    "priority": "Medium",
+    "submitter": "jarvis",
+    "client_name": "Florencia Daiana Gimenez",
+    "client_email": "fgimenez@subsidiaria.com",
+    "client_domain": "newpay.com.ar",
+    "company": "Empresa Principal",
+    "element": "Software / Configuración",
+    "assigned_group": "MESA DE AYUDA Y ATENCION A USUARIOS",
+    "is_jarvis": 1,
+    "source_channel": "Jarvis"
+  },
+  "pipeline_como_se_obtuvo_la_informacion": {
+    "1_deteccion_jarvis": {
+      "regla": "Submitter == 'jarvis' y texto 'Ticket generado automáticamente por Asistente Virtual Jarvis'",
+      "resultado": "is_jarvis = 1, source_channel = 'Jarvis'"
+    },
+    "2_extraccion_usuario_real": {
+      "metodo": "Regex r'para el usuario:\\s*([^)\\r\\n.,;]+)'",
+      "coincidencia_encontrada": "Florencia Daiana Gimenez",
+      "resultado": "client_name = 'Florencia Daiana Gimenez'"
+    },
+    "3_extraccion_correo_y_empresa": {
+      "correo_regex": "fgimenez@subsidiaria.com",
+      "dominio_extraido": "newpay.com.ar",
+      "clasificacion_empresa": "El dominio '@subsidiaria.com' y la razón social 'SUBSIDIARIA B' pertenecen al conglomerado Empresa Principal, por lo que company = 'Empresa Principal'"
+    },
+    "4_clasificacion_tipificacion_elemento": {
+      "palabras_clave_evaluadas": ["software", "instalacion", "licencia", "office", "outlook", "teams", "windows", "configuracion", "permisos", "token", "clave", "acceso"],
+      "patron_detectado": "Palabras 'software', 'instalación', 'configuración', 'token' encontradas en Summary y Descripción",
+      "resultado": "element = 'Software / Configuración'"
+    }
+  }
+}

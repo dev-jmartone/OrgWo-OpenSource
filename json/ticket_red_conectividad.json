@@ -1,0 +1,68 @@
+{
+  "_comentario": "Ejemplo de Ticket con Tipificación 'Red / Conectividad' (WiFi, VPN, Cable de Red Ethernet, Switch, Cisco AnyConnect, GlobalProtect)",
+  "origen_remedy": {
+    "formulario_remedy": "HPD:Help Desk",
+    "endpoint_api": "/api/arsys/v1/entry/HPD:Help Desk",
+    "tipo_ticket": "INC",
+    "grupo_asignado": "SOPORTE REDES Y TELECOMUNICACIONES"
+  },
+  "remedy_raw_api_values": {
+    "Incident Number": "INC000001103215",
+    "Description": "Falla de conectividad a la VPN y WiFi corporativo no conecta desde domicilio",
+    "Detailed Decription": "Ticket generado automáticamente por Asistente Virtual Jarvis (Chatbot)\nPara el usuario: Gaston Nicolas Albornoz\nEmail: galbornoz@subsidiaria.com\nUbicación: Remoto / Home Office\nDetalle: El usuario indica que la red WiFi del hogar funciona normalmente en otros dispositivos, pero en la notebook de la empresa el cliente VPN GlobalProtect queda en estado 'Connecting' y arroja error de Gateway timeout. Se probó reset de adaptadores de red y reinicio de equipo sin mejoría.",
+    "Submit Date": "2024-04-22T08:50:11.000+0000",
+    "Last Modified Date": "2024-04-22T11:20:00.000+0000",
+    "Status": "Closed",
+    "Status_Reason": "Finalizado Satisfactoriamente",
+    "Priority": "High",
+    "First_Name": "Gaston Nicolas",
+    "Last_Name": "Albornoz",
+    "Submitter": "jarvis",
+    "Reported Source": "Self Service / Jarvis",
+    "Assigned Group": "SOPORTE REDES Y TELECOMUNICACIONES",
+    "Company": "Subsidiaria",
+    "Site": "Remoto",
+    "Resolution": "Se actualizó perfil del agente VPN GlobalProtect y se limpió cache de certificados de máquina. Conexión establecida correctamente."
+  },
+  "registro_almacenado_en_base_datos": {
+    "case_id": "INC000001103215",
+    "ticket_type": "INC",
+    "summary": "Falla de conectividad a la VPN y WiFi corporativo no conecta desde domicilio",
+    "description": "Ticket generado automáticamente por Asistente Virtual Jarvis (Chatbot) Para el usuario: Gaston Nicolas Albornoz Email: galbornoz@subsidiaria.com...",
+    "submit_date": "2024-04-22 08:50:11",
+    "submit_month": "2024-04",
+    "last_modified_date": "2024-04-22 11:20:00",
+    "status": "Closed",
+    "priority": "High",
+    "submitter": "jarvis",
+    "client_name": "Gaston Nicolas Albornoz",
+    "client_email": "galbornoz@subsidiaria.com",
+    "client_domain": "subsidiaria.com",
+    "company": "Subsidiaria",
+    "element": "Red / Conectividad",
+    "assigned_group": "SOPORTE REDES Y TELECOMUNICACIONES",
+    "is_jarvis": 1,
+    "source_channel": "Jarvis"
+  },
+  "pipeline_como_se_obtuvo_la_informacion": {
+    "1_deteccion_jarvis": {
+      "regla": "Submitter == 'jarvis' y texto contiene 'Ticket generado automáticamente por Asistente Virtual Jarvis'",
+      "resultado": "is_jarvis = 1, source_channel = 'Jarvis'"
+    },
+    "2_extraccion_usuario_real": {
+      "metodo": "Regex r'para el usuario:\\s*([^)\\r\\n.,;]+)'",
+      "coincidencia_encontrada": "Gaston Nicolas Albornoz",
+      "resultado": "client_name = 'Gaston Nicolas Albornoz'"
+    },
+    "3_extraccion_correo_y_empresa": {
+      "correo_regex": "galbornoz@subsidiaria.com",
+      "dominio_extraido": "subsidiaria.com",
+      "clasificacion_empresa": "El dominio '@subsidiaria.com' y Company 'Subsidiaria' clasifican el ticket exclusivamente como 'Subsidiaria'"
+    },
+    "4_clasificacion_tipificacion_elemento": {
+      "palabras_clave_evaluadas": ["wifi", "vpn", "red", "conectividad", "ethernet", "cisco", "anyconnect", "internet", "lan", "gateway"],
+      "patron_detectado": "Palabras 'conectividad', 'VPN', 'WiFi', 'red' encontradas en Summary y Descripción",
+      "resultado": "element = 'Red / Conectividad'"
+    }
+  }
+}

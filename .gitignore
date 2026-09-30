@@ -1,0 +1,39 @@
+# Variables de entorno
+.env
+.flask_secret
+
+# Python & Entornos Virtuales
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.venv/
+venv/
+ENV/
+build/
+dist/
+*.egg-info/
+
+# Archivos de Base de Datos y Logs temporales
+database/*.db-wal
+database/*.db-shm
+*.db-wal
+*.db-shm
+*.log
+
+# Adjuntos de usuarios y respaldos locales
+attachments/*
+!attachments/.gitkeep
+backups/*
+!backups/.gitkeep
+backups_qa/*
+!backups_qa/.gitkeep
+Backend/inbox_scans/*
+!Backend/inbox_scans/.gitkeep
+
+# IDEs y Editores
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store

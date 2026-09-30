@@ -1,0 +1,84 @@
+{
+  "_comentario": "Ejemplo de ticket tipificado como 'Vincha' (Auricular / Headset Jabra).",
+  "tipificacion_elemento": "Vincha",
+  "origen_remedy": {
+    "formulario": "HPD:Help Desk",
+    "endpoint": "/api/arsys/v1/entry/HPD:Help Desk",
+    "tipo_ticket": "INC",
+    "grupo_asignado": "CTU DT"
+  },
+  "remedy_raw_api_values": {
+    "Incident Number": "INC000004183021",
+    "Description": "Falla en micrófono de vincha Jabra Evolve",
+    "Detailed Decription": "El usuario Pablo Rossi indica que no lo escuchan en llamadas de Teams. Se realizaron pruebas de audio y el micrófono de la vincha USB no responde. Requiere cambio de auricular/headset.",
+    "Submit Date": 1713355200,
+    "Last Modified Date": 1713441600,
+    "Status": "4",
+    "First Name": "PABLO",
+    "Last Name": "ROSSI",
+    "Submitter": "prossi",
+    "Assignee Login ID": "fmartinez",
+    "Assignee": "Facundo Martinez",
+    "Assigned Group": "CTU DT",
+    "Company": "Subsidiaria",
+    "Required Resolution DateTime": 1713528000,
+    "SLM Status": "Within SLM",
+    "Categorization Tier 1": "Hardware",
+    "Categorization Tier 2": "Periféricos",
+    "Categorization Tier 3": "Auricular con Micrófono"
+  },
+  "registro_almacenado_en_base_datos": {
+    "id": "INC000004183021",
+    "ticket_type": "INC",
+    "group_name": "CTU DT",
+    "status_raw": "4",
+    "status_mapped": "4",
+    "status_nombre": "Resuelto / Cerrado",
+    "summary": "Falla en micrófono de vincha Jabra Evolve",
+    "description": "El usuario Pablo Rossi indica que no lo escuchan en llamadas de Teams. Se realizaron pruebas de audio y el micrófono de la vincha USB no responde. Requiere cambio de auricular/headset.",
+    "client_name": "Pablo Rossi",
+    "client_email": "prossi@subsidiaria.com",
+    "assignee_login": "fmartinez",
+    "assignee_name": "Facundo Martinez",
+    "remedy_company": "Subsidiaria",
+    "is_jarvis": 0,
+    "user_company": "Subsidiaria",
+    "element_type": "Vincha",
+    "tipificacion": "Auricular con Micrófono",
+    "sla_status": "Within SLM",
+    "submit_date": "2026-04-17 12:00:00",
+    "submit_month": "2026-04",
+    "last_modified_date": "2026-04-18 12:00:00"
+  },
+  "pipeline_como_se_obtuvo_la_informacion": {
+    "1_deteccion_jarvis": {
+      "metodo": "Revisión de submitter ('prossi'). Ticket ingresado por canal directo.",
+      "resultado_is_jarvis": 0
+    },
+    "2_extraccion_solicitante": {
+      "metodo": "Transformación smart_case_name('PABLO ROSSI') -> 'Pablo Rossi'.",
+      "nombre_crudo_remedy": "PABLO ROSSI",
+      "nombre_normalizado": "Pablo Rossi"
+    },
+    "3_extraccion_email_y_dominio": {
+      "metodo": "Cruce por nombre en el directorio canónico local users_directory (asociado a prossi@subsidiaria.com).",
+      "email_obtenido": "prossi@subsidiaria.com",
+      "dominio_extraido": "@subsidiaria.com"
+    },
+    "4_resolucion_empresa_usuario": {
+      "regla": "Tanto el dominio (@subsidiaria.com) como el campo nativo Company ('Subsidiaria') clasifican directamente como Subsidiaria.",
+      "empresa_remedy_original": "Subsidiaria",
+      "empresa_final_asignada": "Subsidiaria"
+    },
+    "5_tipificacion_hardware": {
+      "regla": "Función parse_element_type() encuentra 'vincha', 'headset' y 'auricular'. Asigna 'Vincha'.",
+      "tipificacion_elemento": "Vincha",
+      "categorizacion_bmc": "Auricular con Micrófono (Tier 3)"
+    },
+    "6_normalizacion_tiempo": {
+      "fecha_origen_epoch": 1713355200,
+      "submit_month_generado": "2026-04",
+      "mes_etiqueta": "Abril 2026"
+    }
+  }
+}

@@ -1,0 +1,1429 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Generador Masivo de Templates — VISA</title>
+<!-- External Libraries -->
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script src="https://cdn.jsdelivr.net/npm/lucide@0.453.0/dist/umd/lucide.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+<style>
+:root {
+    /* Fluent Microsoft theme colors */
+    --primary: #0078D4;
+    --primary-hover: #106EBE;
+    --primary-soft: #DEECF9;
+    --bg-color: #FAF9F8;
+    --bg-deep: #FFFFFF;
+    --surface: #FFFFFF;
+    --surface-2: #F3F2F1;
+    --text: #201F1E;
+    --text-muted: #605E5C;
+    --text-faint: #8A8886;
+    --border: #E1DFDD;
+    --border-soft: #EDEBE9;
+    --shadow: 0 1.6px 3.6px rgba(0,0,0,0.08), 0 0.3px 0.9px rgba(0,0,0,0.06);
+    --shadow-hover: 0 6.4px 14.4px rgba(0,0,0,0.13), 0 1.2px 3.6px rgba(0,0,0,0.10);
+    --radius: 6px;
+    --danger: #A4262C;
+    --success: #107C10;
+    --warning: #CD7F32;
+    --gradient-glow: linear-gradient(135deg, #0078d4, #00bcf2);
+}
+
+:root[data-theme="dark"] {
+    --primary-soft: #1F3A5F;
+    --bg-color: #1B1A19;
+    --bg-deep: #201F1E;
+    --surface: #252423;
+    --surface-2: #2D2C2B;
+    --text: #F3F2F1;
+    --text-muted: #C8C6C4;
+    --text-faint: #8A8886;
+    --border: #3B3A39;
+    --border-soft: #323130;
+    --shadow: 0 4px 12px rgba(0,0,0,0.3);
+    --shadow-hover: 0 8px 24px rgba(0,0,0,0.4);
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Segoe UI', 'Segoe UI Variable', -apple-system, BlinkMacSystemFont, 'Inter', sans-serif;
+    background: var(--bg-color);
+    color: var(--text);
+    line-height: 1.5;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    overflow-x: hidden;
+}
+
+header {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 12px 24px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    box-shadow: var(--shadow);
+}
+
+.brand {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    text-decoration: none;
+    color: inherit;
+}
+
+.brand-mark {
+    background: var(--gradient-glow);
+    color: #fff;
+    width: 32px;
+    height: 32px;
+    border-radius: var(--radius);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 800;
+    font-size: 1.1rem;
+    box-shadow: 0 2px 8px rgba(0, 120, 212, 0.4);
+}
+
+.brand-title {
+    font-size: 1.2rem;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+}
+
+.brand-tag {
+    font-size: 0.75rem;
+    background: var(--primary-soft);
+    color: var(--primary);
+    padding: 2px 8px;
+    border-radius: 99px;
+    font-weight: 600;
+}
+
+.actions-top {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    border: 1px solid transparent;
+    padding: 8px 16px;
+    font-size: 0.875rem;
+    font-weight: 600;
+    border-radius: var(--radius);
+    cursor: pointer;
+    transition: all 0.2s ease;
+    text-decoration: none;
+    font-family: inherit;
+}
+
+.btn-primary {
+    background: var(--primary);
+    color: #fff;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+}
+.btn-primary:hover {
+    background: var(--primary-hover);
+    transform: translateY(-1px);
+}
+.btn-primary:active {
+    transform: translateY(0);
+}
+
+.btn-secondary {
+    background: var(--surface-2);
+    color: var(--text);
+    border-color: var(--border);
+}
+.btn-secondary:hover {
+    background: var(--border-soft);
+}
+
+.btn-ghost {
+    background: transparent;
+    color: var(--text-muted);
+}
+.btn-ghost:hover {
+    background: var(--surface-2);
+    color: var(--text);
+}
+
+.btn-danger {
+    background: rgba(164, 38, 44, 0.1);
+    color: var(--danger);
+    border-color: rgba(164, 38, 44, 0.2);
+}
+.btn-danger:hover {
+    background: var(--danger);
+    color: #fff;
+}
+
+.main-container {
+    display: flex;
+    flex: 1;
+    min-height: 0;
+    width: 100%;
+}
+
+.editor-pane {
+    flex: 1.2;
+    padding: 24px;
+    overflow-y: auto;
+    border-right: 1px solid var(--border);
+    max-height: calc(100vh - 58px);
+}
+
+.preview-pane {
+    flex: 0.8;
+    min-width: 580px;
+    padding: 24px;
+    background: var(--bg-deep);
+    overflow-y: auto;
+    max-height: calc(100vh - 58px);
+    display: flex;
+    flex-direction: column;
+}
+
+.section-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 20px;
+    margin-bottom: 20px;
+    box-shadow: var(--shadow);
+    transition: box-shadow 0.2s ease;
+}
+.section-card:hover {
+    box-shadow: var(--shadow-hover);
+}
+
+.section-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+    border-bottom: 1px solid var(--border-soft);
+    padding-bottom: 10px;
+}
+
+.section-card-header h3 {
+    font-size: 1rem;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.dropzone {
+    border: 2px dashed var(--border);
+    border-radius: var(--radius);
+    padding: 30px;
+    text-align: center;
+    background: var(--bg-color);
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+}
+.dropzone:hover, .dropzone.drag-over {
+    border-color: var(--primary);
+    background: var(--primary-soft);
+    color: var(--primary-hover);
+}
+.dropzone svg {
+    width: 48px;
+    height: 48px;
+    color: var(--text-muted);
+    transition: color 0.2s ease;
+}
+.dropzone:hover svg, .dropzone.drag-over svg {
+    color: var(--primary);
+}
+.dropzone p {
+    font-size: 0.9rem;
+    color: var(--text-muted);
+}
+.dropzone .highlight {
+    color: var(--primary);
+    font-weight: 600;
+}
+
+.field-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 16px;
+}
+
+.field-full {
+    grid-column: 1 / -1;
+}
+
+.field {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.field label {
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    letter-spacing: 0.03em;
+}
+
+.field input, .field select, .field textarea {
+    padding: 8px 12px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: var(--surface);
+    color: var(--text);
+    font-family: inherit;
+    font-size: 0.875rem;
+    width: 100%;
+    outline: none;
+    transition: border-color 0.2s ease;
+}
+
+.field input:focus, .field select:focus, .field textarea:focus {
+    border-color: var(--primary);
+}
+
+.data-table-container {
+    width: 100%;
+    overflow-x: auto;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    margin-top: 15px;
+    max-height: 300px;
+    overflow-y: auto;
+}
+
+table.data-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.85rem;
+    text-align: left;
+}
+
+table.data-table th, table.data-table td {
+    padding: 10px 12px;
+    border-bottom: 1px solid var(--border-soft);
+}
+
+table.data-table th {
+    background: var(--surface-2);
+    font-weight: 700;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+}
+
+table.data-table tr:hover {
+    background: var(--surface-2);
+    cursor: pointer;
+}
+
+table.data-table tr.selected {
+    background: var(--primary-soft);
+}
+
+.status-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 2px 8px;
+    border-radius: 99px;
+    font-size: 0.75rem;
+    font-weight: 600;
+}
+.status-pending { background: var(--border-soft); color: var(--text-muted); }
+.status-done { background: rgba(16, 124, 16, 0.1); color: var(--success); }
+.status-error { background: rgba(164, 38, 44, 0.1); color: var(--danger); }
+
+.preview-scroll-wrapper {
+    background: #FFF;
+    border: 1px solid var(--border);
+    box-shadow: var(--shadow);
+    padding: 40px;
+    margin: 15px 0;
+    flex: 1;
+    overflow-y: auto;
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    color: #000;
+}
+
+.preview-document {
+    width: 600px;
+    background: #FFF;
+    font-family: Arial, sans-serif;
+    color: #000;
+}
+
+.preview-title {
+    font-weight: 600;
+    font-size: 0.95rem;
+    margin-bottom: 8px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.preview-actions {
+    display: flex;
+    gap: 12px;
+    margin-top: auto;
+}
+
+.progress-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: rgba(0,0,0,0.5);
+    z-index: 9999;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    color: #fff;
+    gap: 15px;
+    backdrop-filter: blur(4px);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s ease;
+}
+.progress-overlay.active {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+.progress-box {
+    background: var(--surface);
+    border-radius: var(--radius);
+    padding: 24px;
+    width: 400px;
+    box-shadow: var(--shadow-hover);
+    color: var(--text);
+    text-align: center;
+}
+
+.progress-bar-container {
+    background: var(--surface-2);
+    border-radius: 99px;
+    height: 10px;
+    width: 100%;
+    margin: 16px 0;
+    overflow: hidden;
+}
+
+.progress-bar-fill {
+    background: var(--gradient-glow);
+    height: 100%;
+    width: 0%;
+    transition: width 0.1s ease;
+}
+
+/* Print Specific Sandbox */
+#pdf-rendering-sandbox {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 600px;
+    z-index: -9999;
+    background: #FFF;
+    opacity: 0.99;
+    pointer-events: none;
+}
+
+.search-box {
+    margin-bottom: 12px;
+    position: relative;
+}
+.search-box input {
+    padding-left: 36px !important;
+}
+.search-box svg {
+    position: absolute;
+    left: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 16px;
+    height: 16px;
+    color: var(--text-faint);
+}
+
+.floating-theme-toggle {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    color: var(--text-muted);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+.floating-theme-toggle:hover {
+    color: var(--text);
+    background: var(--border-soft);
+    transform: scale(1.05);
+}
+
+.mapping-modal-content {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    text-align: left;
+}
+
+.mapping-modal-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 15px;
+}
+
+.mapping-modal-row select {
+    padding: 6px;
+    border-radius: 4px;
+    border: 1px solid var(--border);
+    width: 150px;
+}
+</style>
+</head>
+<body>
+
+<header>
+    <a href="GeneradorManual.html" class="brand">
+        <div class="brand-mark">V</div>
+        <div class="brand-title">Generador VISA</div>
+        <span class="brand-tag">Masivo PDF</span>
+    </a>
+    <div class="actions-top">
+        <a href="GeneradorManual.html" class="btn btn-secondary">
+            <i data-lucide="arrow-left"></i> Generador Manual
+        </a>
+        <button id="themeToggle" class="floating-theme-toggle" title="Cambiar Tema">
+            <i data-lucide="sun"></i>
+        </button>
+    </div>
+</header>
+
+<main class="main-container">
+    <!-- Left panel: importer, config, parsed data -->
+    <section class="editor-pane">
+        <div class="section-card">
+            <div class="section-card-header">
+                <h3><i data-lucide="file-spreadsheet"></i> Importar Archivo (Excel o CSV)</h3>
+            </div>
+            
+            <div class="dropzone" id="uploadZone">
+                <i data-lucide="cloud-upload" style="width: 40px; height: 40px;"></i>
+                <p>Arrastrá y soltá tu archivo Excel (.xlsx, .xls) o CSV acá</p>
+                <p style="font-size: 0.8rem;">O hacé <span class="highlight">clic para buscar</span> en tu computadora</p>
+                <input type="file" id="fileInput" accept=".xlsx,.xls,.csv" style="display: none;">
+            </div>
+            <div id="fileInfo" style="margin-top: 10px; font-size: 0.85rem; color: var(--text-muted); display: none; align-items: center; gap: 8px;">
+                <i data-lucide="file" style="width: 16px; height: 16px; color: var(--success);"></i>
+                <span id="fileNameText">archivo.xlsx</span>
+                <span id="rowCountText" class="brand-tag">0 filas</span>
+            </div>
+        </div>
+
+        <div class="section-card">
+            <div class="section-card-header">
+                <h3><i data-lucide="settings"></i> Configuración de Campos por Defecto</h3>
+            </div>
+            <form id="configForm" class="field-grid">
+                <div class="field">
+                    <label>Título Documento</label>
+                    <input type="text" id="cfgTitle" value="EGRESA POR ASIGNACIÓN">
+                </div>
+                <div class="field">
+                    <label>Elemento y Tipo de Movimiento</label>
+                    <input type="text" id="cfgTipoMovimiento" value="Notebook - Egreso">
+                </div>
+                <div class="field">
+                    <label>Empresa Propietaria</label>
+                    <input type="text" id="cfgEmpresa" value="VISA">
+                </div>
+                <div class="field field-full">
+                    <label>Estado General y Observaciones</label>
+                    <textarea id="cfgObservaciones" rows="2">Se hace entrega de Laptop Visa para prueba piloto.</textarea>
+                </div>
+            </form>
+        </div>
+
+        <div class="section-card">
+            <div class="section-card-header">
+                <h3><i data-lucide="list"></i> Equipos Importados</h3>
+                <div style="display: flex; gap: 8px;">
+                    <button class="btn btn-secondary" id="btnEditSelected" style="padding: 4px 8px; font-size: 0.8rem;" disabled>
+                        <i data-lucide="pencil" style="width: 14px; height: 14px;"></i> Editar
+                    </button>
+                    <button class="btn btn-danger" id="btnDeleteSelected" style="padding: 4px 8px; font-size: 0.8rem;" disabled>
+                        <i data-lucide="trash-2" style="width: 14px; height: 14px;"></i> Borrar
+                    </button>
+                </div>
+            </div>
+
+            <div class="search-box">
+                <i data-lucide="search"></i>
+                <input type="text" id="searchTable" placeholder="Filtrar por marca, modelo o serie...">
+            </div>
+
+            <div class="data-table-container">
+                <table class="data-table" id="parsedDataTable">
+                    <thead>
+                        <tr>
+                            <th style="width: 40px;"><input type="checkbox" id="selectAllCheckbox"></th>
+                            <th>Marca</th>
+                            <th>Modelo</th>
+                            <th>Número de Serie</th>
+                            <th>Estado</th>
+                        </tr>
+                    </thead>
+                    <tbody id="dataTableBody">
+                        <tr>
+                            <td colspan="5" style="text-align: center; color: var(--text-faint); padding: 30px;">
+                                No hay datos cargados. Cargá un Excel/CSV para ver el listado.
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </section>
+
+    <!-- Right panel: live template preview -->
+    <section class="preview-pane">
+        <div class="preview-title">
+            <i data-lucide="eye"></i> Vista Previa del Template Seleccionado
+        </div>
+
+        <div class="preview-scroll-wrapper">
+            <div class="preview-document" id="previewHtmlBody">
+                <div style="text-align: center; color: var(--text-faint); margin-top: 50px;">
+                    Seleccioná una fila de la tabla para ver su vista previa
+                </div>
+            </div>
+        </div>
+
+        <div class="preview-actions">
+            <button class="btn btn-primary" id="btnSaveToDirectory" style="flex: 1.5;" disabled>
+                <i data-lucide="folder-output"></i> Guardar en carpeta "Templates_visa"
+            </button>
+            <button class="btn btn-secondary" id="btnDownloadZip" style="flex: 1;" disabled>
+                <i data-lucide="file-archive"></i> Descargar ZIP
+            </button>
+            <button class="btn btn-secondary" id="btnDownloadCombined" style="flex: 1;" disabled>
+                <i data-lucide="file-text"></i> PDF Combinado
+            </button>
+            <button class="btn btn-ghost" id="btnClearAll" style="flex: 0.5;" title="Limpiar Todo">
+                <i data-lucide="refresh-cw"></i>
+            </button>
+        </div>
+    </section>
+</main>
+
+<!-- Sandbox element for single PDF export renders -->
+<div id="pdf-rendering-sandbox"></div>
+
+<!-- Custom Progress Overlay -->
+<div class="progress-overlay" id="progressOverlay">
+    <div class="progress-box">
+        <h3 id="progressTitle">Generando Documentos...</h3>
+        <p id="progressSubtitle" style="font-size: 0.85rem; color: var(--text-muted); margin-top: 4px;">Procesando filas...</p>
+        <div class="progress-bar-container">
+            <div class="progress-bar-fill" id="progressBarFill"></div>
+        </div>
+        <div id="progressCount" style="font-size: 0.9rem; font-weight: 600;">0 / 0</div>
+    </div>
+</div>
+
+<script>
+// ============================================================
+// STATE & REGISTRIES
+// ============================================================
+let parsedRows = []; // { id, marca, modelo, serial, status: 'pending'|'done'|'error' }
+let selectedRowIndex = null;
+let activeTheme = 'light';
+
+// ============================================================
+// INITIALIZATION
+// ============================================================
+document.addEventListener('DOMContentLoaded', () => {
+    initTheme();
+    setupDropzone();
+    setupEventHandlers();
+    lucide.createIcons();
+});
+
+// ============================================================
+// THEME SWITCHER
+// ============================================================
+function initTheme() {
+    const savedTheme = localStorage.getItem('theme') || 'light';
+    setTheme(savedTheme);
+}
+
+function setTheme(theme) {
+    activeTheme = theme;
+    document.documentElement.setAttribute('data-theme', theme);
+    localStorage.setItem('theme', theme);
+    const themeBtn = document.getElementById('themeToggle');
+    themeBtn.innerHTML = theme === 'dark' ? '<i data-lucide="moon"></i>' : '<i data-lucide="sun"></i>';
+    lucide.createIcons();
+}
+
+document.getElementById('themeToggle').addEventListener('click', () => {
+    setTheme(activeTheme === 'dark' ? 'light' : 'dark');
+});
+
+// ============================================================
+// EVENT HANDLERS
+// ============================================================
+function setupEventHandlers() {
+    document.getElementById('searchTable').addEventListener('input', renderTable);
+    document.getElementById('cfgTitle').addEventListener('input', refreshPreview);
+    document.getElementById('cfgTipoMovimiento').addEventListener('input', refreshPreview);
+    document.getElementById('cfgEmpresa').addEventListener('input', refreshPreview);
+    document.getElementById('cfgObservaciones').addEventListener('input', refreshPreview);
+
+    // Buttons
+    document.getElementById('btnClearAll').addEventListener('click', clearAll);
+    document.getElementById('btnDeleteSelected').addEventListener('click', deleteSelectedRows);
+    document.getElementById('btnEditSelected').addEventListener('click', editSelectedRow);
+    document.getElementById('btnSaveToDirectory').addEventListener('click', saveToFolderFlow);
+    document.getElementById('btnDownloadZip').addEventListener('click', downloadZipFlow);
+    document.getElementById('btnDownloadCombined').addEventListener('click', downloadCombinedFlow);
+
+    // Multi-select checkbox
+    document.getElementById('selectAllCheckbox').addEventListener('change', (e) => {
+        const checked = e.target.checked;
+        const visibleRows = getFilteredRows();
+        visibleRows.forEach(row => {
+            row.selected = checked;
+        });
+        renderTable();
+        updateActionButtonStates();
+    });
+}
+
+// ============================================================
+// FILE UPLOAD & PARSING
+// ============================================================
+function setupDropzone() {
+    const zone = document.getElementById('uploadZone');
+    const input = document.getElementById('fileInput');
+
+    zone.addEventListener('click', () => input.click());
+
+    zone.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        zone.classList.add('drag-over');
+    });
+
+    zone.addEventListener('dragleave', () => {
+        zone.classList.remove('drag-over');
+    });
+
+    zone.addEventListener('drop', (e) => {
+        e.preventDefault();
+        zone.classList.remove('drag-over');
+        if (e.dataTransfer.files.length > 0) {
+            handleFile(e.dataTransfer.files[0]);
+        }
+    });
+
+    input.addEventListener('change', (e) => {
+        if (e.target.files.length > 0) {
+            handleFile(e.target.files[0]);
+        }
+    });
+}
+
+function handleFile(file) {
+    const reader = new FileReader();
+    const extension = file.name.split('.').pop().toLowerCase();
+
+    reader.onload = function(e) {
+        try {
+            const data = new Uint8Array(e.target.result);
+            let rows = [];
+
+            if (extension === 'csv') {
+                const text = new TextDecoder('utf-8').decode(data);
+                rows = parseCsv(text);
+            } else {
+                const workbook = XLSX.read(data, { type: 'array' });
+                const firstSheetName = workbook.SheetNames[0];
+                const worksheet = workbook.Sheets[firstSheetName];
+                rows = XLSX.utils.sheet_to_json(worksheet, { defval: '' });
+            }
+
+            processImportedRows(rows, file.name);
+        } catch (err) {
+            console.error(err);
+            Swal.fire({
+                icon: 'error',
+                title: 'Error al leer archivo',
+                text: 'Asegurate de que el formato sea compatible (.xlsx, .xls o .csv).',
+                confirmButtonColor: 'var(--primary)'
+            });
+        }
+    };
+
+    reader.readAsArrayBuffer(file);
+}
+
+function parseCsv(text) {
+    // Basic CSV parser that handles delimiters (comma or semicolon)
+    const lines = text.split(/\r?\n/).filter(line => line.trim() !== '');
+    if (lines.length === 0) return [];
+
+    const delimiter = lines[0].includes(';') ? ';' : ',';
+    const headers = lines[0].split(delimiter).map(h => h.replace(/^["']|["']$/g, '').trim());
+
+    const result = [];
+    for (let i = 1; i < lines.length; i++) {
+        const columns = lines[i].split(delimiter).map(c => c.replace(/^["']|["']$/g, '').trim());
+        const row = {};
+        headers.forEach((header, index) => {
+            row[header] = columns[index] !== undefined ? columns[index] : '';
+        });
+        result.push(row);
+    }
+    return result;
+}
+
+function processImportedRows(rows, fileName) {
+    if (rows.length === 0) {
+        Swal.fire('Archivo Vacío', 'No se encontraron registros en el archivo.', 'warning');
+        return;
+    }
+
+    // Header mapping discovery
+    const firstRow = rows[0];
+    const mapping = findHeaderMapping(firstRow);
+
+    if (!mapping.brand || !mapping.model || !mapping.serial) {
+        // Headers not auto-matched. Let user map columns via SweetAlert
+        promptColumnMapping(firstRow, Object.keys(firstRow), (userMapping) => {
+            importWithMapping(rows, userMapping, fileName);
+        });
+    } else {
+        importWithMapping(rows, mapping, fileName);
+    }
+}
+
+// ============================================================
+// HEADER MAPPING UTILS
+// ============================================================
+function findHeaderMapping(firstRow) {
+    const keys = Object.keys(firstRow);
+    const mapping = { brand: null, model: null, serial: null };
+
+    const norm = (str) => str.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]/g, "").trim();
+
+    keys.forEach(k => {
+        const n = norm(k);
+        if (n === 'marca' || n === 'brand') mapping.brand = k;
+        else if (n === 'modelo' || n === 'model') mapping.model = k;
+        else if (n === 'serial' || n === 'serie' || n === 'sn' || n === 'numerodeserie' || n === 'serialnumber' || n === 'svctag') mapping.serial = k;
+    });
+
+    return mapping;
+}
+
+function promptColumnMapping(firstRow, keys, callback) {
+    let selectBrand = `<select id="swalBrand" class="swal2-input" style="width:70%; margin: 8px auto;"><option value="">-- Seleccionar --</option>${keys.map(k => `<option value="${k}">${k}</option>`).join('')}</select>`;
+    let selectModel = `<select id="swalModel" class="swal2-input" style="width:70%; margin: 8px auto;"><option value="">-- Seleccionar --</option>${keys.map(k => `<option value="${k}">${k}</option>`).join('')}</select>`;
+    let selectSerial = `<select id="swalSerial" class="swal2-input" style="width:70%; margin: 8px auto;"><option value="">-- Seleccionar --</option>${keys.map(k => `<option value="${k}">${k}</option>`).join('')}</select>`;
+
+    Swal.fire({
+        title: 'Mapeo de Columnas',
+        html: `
+            <div class="mapping-modal-content">
+                <p style="font-size: 0.9rem; margin-bottom: 12px; color: var(--text-muted);">No pudimos identificar todas las columnas necesarias automáticamente. Por favor seleccionalas:</p>
+                <div class="mapping-modal-row"><label><strong>Marca:</strong></label>${selectBrand}</div>
+                <div class="mapping-modal-row"><label><strong>Modelo:</strong></label>${selectModel}</div>
+                <div class="mapping-modal-row"><label><strong>Nro Serie:</strong></label>${selectSerial}</div>
+            </div>
+        `,
+        focusConfirm: false,
+        confirmButtonColor: 'var(--primary)',
+        confirmButtonText: 'Confirmar Mapeo',
+        preConfirm: () => {
+            const brand = document.getElementById('swalBrand').value;
+            const model = document.getElementById('swalModel').value;
+            const serial = document.getElementById('swalSerial').value;
+            if (!brand || !model || !serial) {
+                Swal.showValidationMessage('Tenés que seleccionar las tres columnas para continuar.');
+                return false;
+            }
+            return { brand, model, serial };
+        }
+    }).then((result) => {
+        if (result.isConfirmed) {
+            callback(result.value);
+        }
+    });
+}
+
+function importWithMapping(rows, mapping, fileName) {
+    parsedRows = rows.map((r, idx) => ({
+        id: idx + 1,
+        marca: String(r[mapping.brand] || '').trim(),
+        modelo: String(r[mapping.model] || '').trim(),
+        serial: String(r[mapping.serial] || '').trim(),
+        status: 'pending',
+        selected: false
+    })).filter(item => item.marca || item.modelo || item.serial); // filter empty lines
+
+    // Update File UI info
+    document.getElementById('fileNameText').textContent = fileName;
+    document.getElementById('rowCountText').textContent = `${parsedRows.length} equipos`;
+    document.getElementById('fileInfo').style.display = 'flex';
+
+    if (parsedRows.length > 0) {
+        selectedRowIndex = 0;
+        parsedRows[0].selected = true;
+    }
+
+    renderTable();
+    refreshPreview();
+    updateActionButtonStates();
+
+    Swal.fire({
+        icon: 'success',
+        title: 'Archivo cargado',
+        text: `Se importaron ${parsedRows.length} equipos con éxito.`,
+        timer: 2000,
+        showConfirmButton: false
+    });
+}
+
+// ============================================================
+// DATA TABLE RENDERING
+// ============================================================
+function getFilteredRows() {
+    const query = document.getElementById('searchTable').value.toLowerCase().trim();
+    if (!query) return parsedRows;
+    return parsedRows.filter(r => 
+        r.marca.toLowerCase().includes(query) || 
+        r.modelo.toLowerCase().includes(query) || 
+        r.serial.toLowerCase().includes(query)
+    );
+}
+
+function renderTable() {
+    const tbody = document.getElementById('dataTableBody');
+    const filtered = getFilteredRows();
+
+    if (filtered.length === 0) {
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="5" style="text-align: center; color: var(--text-faint); padding: 30px;">
+                    Ningún equipo coincide con la búsqueda.
+                </td>
+            </tr>
+        `;
+        return;
+    }
+
+    tbody.innerHTML = filtered.map((row) => {
+        const isSelected = selectedRowIndex !== null && parsedRows[selectedRowIndex]?.id === row.id;
+        const isChecked = row.selected ? 'checked' : '';
+        const rowClass = isSelected ? 'class="selected"' : '';
+        
+        let statusBadge = '';
+        if (row.status === 'pending') statusBadge = '<span class="status-badge status-pending">Pendiente</span>';
+        else if (row.status === 'done') statusBadge = '<span class="status-badge status-done">Listo</span>';
+        else if (row.status === 'error') statusBadge = '<span class="status-badge status-error">Error</span>';
+
+        return `
+            <tr ${rowClass} onclick="handleRowClick(${row.id}, event)">
+                <td><input type="checkbox" class="row-selector" data-id="${row.id}" ${isChecked} onclick="event.stopPropagation(); handleCheckboxChange(${row.id}, this.checked);"></td>
+                <td>${escapeHtml(row.marca)}</td>
+                <td>${escapeHtml(row.modelo)}</td>
+                <td><code style="font-family: monospace; font-weight: 600;">${escapeHtml(row.serial)}</code></td>
+                <td>${statusBadge}</td>
+            </tr>
+        `;
+    }).join('');
+
+    lucide.createIcons();
+}
+
+function handleRowClick(id, event) {
+    // Avoid double firing if target is input
+    if (event.target.tagName === 'INPUT') return;
+
+    const index = parsedRows.findIndex(r => r.id === id);
+    if (index !== -1) {
+        selectedRowIndex = index;
+        renderTable();
+        refreshPreview();
+    }
+}
+
+function handleCheckboxChange(id, checked) {
+    const row = parsedRows.find(r => r.id === id);
+    if (row) {
+        row.selected = checked;
+        updateActionButtonStates();
+    }
+}
+
+function updateActionButtonStates() {
+    const selectedCount = parsedRows.filter(r => r.selected).length;
+    const hasData = parsedRows.length > 0;
+
+    document.getElementById('btnDeleteSelected').disabled = selectedCount === 0;
+    document.getElementById('btnEditSelected').disabled = selectedCount !== 1;
+    document.getElementById('btnSaveToDirectory').disabled = !hasData;
+    document.getElementById('btnDownloadZip').disabled = !hasData;
+    document.getElementById('btnDownloadCombined').disabled = !hasData;
+}
+
+// ============================================================
+// ROW CRUD
+// ============================================================
+function deleteSelectedRows() {
+    const selectedIds = parsedRows.filter(r => r.selected).map(r => r.id);
+    
+    Swal.fire({
+        title: `¿Confirmás borrar ${selectedIds.length} filas?`,
+        text: "Se eliminarán del listado importado permanentemente.",
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: 'var(--danger)',
+        cancelButtonColor: 'var(--text-muted)',
+        confirmButtonText: 'Sí, borrar',
+        cancelButtonText: 'Cancelar'
+    }).then((result) => {
+        if (result.isConfirmed) {
+            parsedRows = parsedRows.filter(r => !selectedIds.includes(r.id));
+            if (parsedRows.length > 0) {
+                selectedRowIndex = 0;
+                parsedRows[0].selected = true;
+            } else {
+                selectedRowIndex = null;
+                document.getElementById('fileInfo').style.display = 'none';
+            }
+            document.getElementById('selectAllCheckbox').checked = false;
+            renderTable();
+            refreshPreview();
+            updateActionButtonStates();
+            Swal.fire('Eliminado', '', 'success');
+        }
+    });
+}
+
+function editSelectedRow() {
+    const selectedRow = parsedRows.find(r => r.selected);
+    if (!selectedRow) return;
+
+    Swal.fire({
+        title: 'Editar Datos de Equipo',
+        html: `
+            <div style="text-align: left; display: flex; flex-direction: column; gap: 10px;">
+                <div class="field">
+                    <label>Marca</label>
+                    <input type="text" id="editMarca" class="swal2-input" value="${escapeHtml(selectedRow.marca)}" style="margin: 4px 0; width:100%;">
+                </div>
+                <div class="field">
+                    <label>Modelo</label>
+                    <input type="text" id="editModelo" class="swal2-input" value="${escapeHtml(selectedRow.modelo)}" style="margin: 4px 0; width:100%;">
+                </div>
+                <div class="field">
+                    <label>Número de Serie</label>
+                    <input type="text" id="editSerial" class="swal2-input" value="${escapeHtml(selectedRow.serial)}" style="margin: 4px 0; width:100%;">
+                </div>
+            </div>
+        `,
+        focusConfirm: false,
+        confirmButtonColor: 'var(--primary)',
+        confirmButtonText: 'Guardar Cambios',
+        showCancelButton: true,
+        cancelButtonText: 'Cancelar',
+        preConfirm: () => {
+            return {
+                marca: document.getElementById('editMarca').value.trim(),
+                modelo: document.getElementById('editModelo').value.trim(),
+                serial: document.getElementById('editSerial').value.trim()
+            };
+        }
+    }).then((result) => {
+        if (result.isConfirmed) {
+            selectedRow.marca = result.value.marca;
+            selectedRow.modelo = result.value.modelo;
+            selectedRow.serial = result.value.serial;
+            
+            renderTable();
+            refreshPreview();
+            Swal.fire('Guardado', 'Los datos del equipo fueron actualizados.', 'success');
+        }
+    });
+}
+
+function clearAll() {
+    if (parsedRows.length === 0) return;
+
+    Swal.fire({
+        title: '¿Limpiar todos los datos?',
+        text: 'Se borrarán los registros importados y se restablecerán los campos.',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: 'var(--primary)',
+        cancelButtonColor: 'var(--text-muted)',
+        confirmButtonText: 'Sí, limpiar',
+        cancelButtonText: 'Cancelar'
+    }).then((result) => {
+        if (result.isConfirmed) {
+            parsedRows = [];
+            selectedRowIndex = null;
+            document.getElementById('fileInput').value = '';
+            document.getElementById('searchTable').value = '';
+            document.getElementById('fileInfo').style.display = 'none';
+            document.getElementById('selectAllCheckbox').checked = false;
+            
+            renderTable();
+            refreshPreview();
+            updateActionButtonStates();
+            Swal.fire('Limpiado', '', 'success');
+        }
+    });
+}
+
+// ============================================================
+// PDF HTML GENERATOR & RENDERER
+// ============================================================
+function buildSingleTemplateHtml(row, configs) {
+    const tableStyle = `width: 600px; border-collapse: collapse; font-family: Arial, sans-serif; font-size: 13px; color: #000; margin-top: 5px;`;
+    const tdK = `border: 1px solid #a3a3a3; padding: 7px 10px; width: 220px; font-weight: bold;`;
+    const tdV = `border: 1px solid #a3a3a3; padding: 7px 10px; width: 380px;`;
+    const tdSig = `border: 1px solid #a3a3a3; padding: 26px 10px;`;
+    const titleStyle = `font-family: Arial, sans-serif; font-weight: bold; font-size: 15px; margin-bottom: 20px; color: #000; text-transform: uppercase; border-bottom: 2px solid #000; padding-bottom: 5px;`;
+
+    const marcaModelo = `${row.marca || ''} ${row.modelo || ''}`.trim();
+    
+    return `
+        <div style="margin-bottom: 0px; background: #FFF; color: #000; font-family: Arial, sans-serif;">
+            <div style="${titleStyle}">${escapeHtml(configs.title)}</div>
+            <div style="font-family: Arial, sans-serif; font-size: 13px; font-weight: bold; margin-top: 35px; margin-bottom: 10px; text-transform: uppercase; color: #000;">Detalles del Equipo</div>
+            <table style="${tableStyle}">
+                <tbody>
+                    <tr>
+                        <td style="${tdK}">Elemento y Tipo de Movimiento</td>
+                        <td style="${tdV}">${escapeHtml(configs.tipoMovimiento)}</td>
+                    </tr>
+                    <tr>
+                        <td style="${tdK}">Marca y Modelo del equipo</td>
+                        <td style="${tdV}">${escapeHtml(marcaModelo)}</td>
+                    </tr>
+                    <tr>
+                        <td style="${tdK}">Número de serie del equipo</td>
+                        <td style="${tdV}">${escapeHtml(row.serial || '')}</td>
+                    </tr>
+                    <tr>
+                        <td style="${tdK}">Fecha de entrega</td>
+                        <td style="${tdV}"></td>
+                    </tr>
+                    <tr>
+                        <td style="${tdK}">Empresa Propietaria</td>
+                        <td style="${tdV}">${escapeHtml(configs.empresa)}</td>
+                    </tr>
+                    <tr>
+                        <td style="${tdSig} font-weight: bold;">Nombre de quien recibe</td>
+                        <td style="${tdSig}"></td>
+                    </tr>
+                    <tr>
+                        <td style="${tdK}">Estado general y observaciones</td>
+                        <td style="${tdV}">${escapeHtml(configs.observaciones)}</td>
+                    </tr>
+                    <tr>
+                        <td style="${tdSig} font-weight: bold;">Firma:</td>
+                        <td style="${tdSig}"></td>
+                    </tr>
+                    <tr>
+                        <td style="${tdSig} font-weight: bold;">Aclaracion:</td>
+                        <td style="${tdSig}"></td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    `;
+}
+
+function getFormConfigs() {
+    return {
+        title: document.getElementById('cfgTitle').value.trim() || 'EGRESA POR ASIGNACIÓN',
+        tipoMovimiento: document.getElementById('cfgTipoMovimiento').value.trim() || 'Notebook - Egreso',
+        empresa: document.getElementById('cfgEmpresa').value.trim() || 'VISA',
+        observaciones: document.getElementById('cfgObservaciones').value.trim() || 'Se hace entrega de Laptop Visa para prueba piloto.'
+    };
+}
+
+function refreshPreview() {
+    const previewContainer = document.getElementById('previewHtmlBody');
+    if (selectedRowIndex === null || parsedRows.length === 0) {
+        previewContainer.innerHTML = `
+            <div style="text-align: center; color: var(--text-faint); margin-top: 50px;">
+                Seleccioná una fila de la tabla para ver su vista previa
+            </div>
+        `;
+        return;
+    }
+
+    const row = parsedRows[selectedRowIndex];
+    const configs = getFormConfigs();
+    previewContainer.innerHTML = buildSingleTemplateHtml(row, configs);
+}
+
+// ============================================================
+// EXPORT & PDF FLOWS
+// ============================================================
+function showProgress(show, total = 0, current = 0, title = 'Generando...', subtitle = '') {
+    const overlay = document.getElementById('progressOverlay');
+    if (!show) {
+        overlay.classList.remove('active');
+        return;
+    }
+
+    overlay.classList.add('active');
+    document.getElementById('progressTitle').textContent = title;
+    document.getElementById('progressSubtitle').textContent = subtitle;
+    document.getElementById('progressCount').textContent = `${current} / ${total}`;
+    
+    const percentage = total > 0 ? (current / total) * 100 : 0;
+    document.getElementById('progressBarFill').style.width = `${percentage}%`;
+}
+
+function sanitizeFileName(brand, model, serial) {
+    const base = `TemplateVISA_${serial}`;
+    return base.replace(/[^a-zA-Z0-9_\-]/g, '_') + '.pdf';
+}
+
+async function renderPdfBlob(row, configs) {
+    const htmlString = `
+        <div style="padding: 20px; background: #FFF; color: #000; font-family: Arial, sans-serif; width: 600px;">
+            ${buildSingleTemplateHtml(row, configs)}
+        </div>
+    `;
+    
+    // Configure html2pdf options
+    const opt = {
+        margin:       15,
+        filename:     sanitizeFileName(row.marca, row.modelo, row.serial),
+        image:        { type: 'jpeg', quality: 0.98 },
+        html2canvas:  { scale: 2, useCORS: true, logging: false },
+        jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
+    };
+
+    // Return the generated PDF blob promise
+    const blob = await html2pdf().from(htmlString).set(opt).output('blob');
+    return blob;
+}
+
+// flow 1: Choose Folder & Save inside Subfolder 'Templates_visa'
+async function saveToFolderFlow() {
+    if (!window.showDirectoryPicker) {
+        Swal.fire({
+            title: 'No Soportado',
+            text: 'Tu navegador no tiene la API de Sistema de Archivos activa (usá Chrome, Edge o descarga la opción ZIP).',
+            icon: 'error',
+            confirmButtonColor: 'var(--primary)'
+        });
+        return;
+    }
+
+    try {
+        const rootHandle = await window.showDirectoryPicker();
+        
+        // Create or get subfolder named 'Templates_visa'
+        const visaDirHandle = await rootHandle.getDirectoryHandle('Templates_visa', { create: true });
+
+        const configs = getFormConfigs();
+        const total = parsedRows.length;
+        
+        showProgress(true, total, 0, 'Guardando en Carpeta...', 'Iniciando proceso...');
+
+        for (let i = 0; i < total; i++) {
+            const row = parsedRows[i];
+            
+            showProgress(true, total, i + 1, 'Guardando en Carpeta...', `Procesando: ${row.marca} ${row.modelo} - SN: ${row.serial}`);
+            
+            try {
+                const blob = await renderPdfBlob(row, configs);
+                const fileName = sanitizeFileName(row.marca, row.modelo, row.serial);
+                
+                // Write file to handles
+                const fileHandle = await visaDirHandle.getFileHandle(fileName, { create: true });
+                const writable = await fileHandle.createWritable();
+                await writable.write(blob);
+                await writable.close();
+                
+                row.status = 'done';
+            } catch (err) {
+                console.error(err);
+                row.status = 'error';
+            }
+            
+            // Allow DOM thread yields to prevent UI freeze
+            await new Promise(r => setTimeout(r, 80));
+        }
+
+        showProgress(false);
+        renderTable();
+        
+        Swal.fire({
+            icon: 'success',
+            title: 'Completado',
+            text: `Se crearon todos los templates en la subcarpeta 'Templates_visa' dentro de la ruta elegida.`,
+            confirmButtonColor: 'var(--primary)'
+        });
+
+    } catch (err) {
+        console.error(err);
+        showProgress(false);
+        if (err.name !== 'AbortError') {
+            Swal.fire('Error', 'Surgió un error al escribir en el disco.', 'error');
+        }
+    }
+}
+
+// flow 2: Download ZIP containing all PDFs
+async function downloadZipFlow() {
+    const zip = new JSZip();
+    const configs = getFormConfigs();
+    const total = parsedRows.length;
+
+    showProgress(true, total, 0, 'Generando archivos para ZIP...', 'Compilando PDFs...');
+
+    for (let i = 0; i < total; i++) {
+        const row = parsedRows[i];
+        showProgress(true, total, i + 1, 'Generando archivos para ZIP...', `Procesando: ${row.marca} ${row.modelo} - SN: ${row.serial}`);
+        
+        try {
+            const blob = await renderPdfBlob(row, configs);
+            const fileName = sanitizeFileName(row.marca, row.modelo, row.serial);
+            
+            // Put in folder inside the ZIP file
+            zip.folder('Templates_visa').file(fileName, blob);
+            row.status = 'done';
+        } catch (err) {
+            console.error(err);
+            row.status = 'error';
+        }
+
+        await new Promise(r => setTimeout(r, 80));
+    }
+
+    showProgress(true, total, total, 'Creando archivo ZIP...', 'Comprimiendo carpeta...');
+
+    try {
+        const zipBlob = await zip.generateAsync({ type: 'blob' });
+        const url = URL.createObjectURL(zipBlob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'Templates_visa.zip';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+    } catch (err) {
+        console.error(err);
+        Swal.fire('Error', 'Falló la generación del archivo ZIP.', 'error');
+    }
+
+    showProgress(false);
+    renderTable();
+}
+
+// flow 3: Download a single combined PDF (with page breaks)
+async function downloadCombinedFlow() {
+    const configs = getFormConfigs();
+    
+    // Inject all elements with page-breaks into a single string
+    const htmlString = parsedRows.map((row, idx) => {
+        const pageBreak = idx < parsedRows.length - 1 ? '<div style="page-break-after: always; height: 1px;"></div>' : '';
+        return `
+            <div style="padding: 20px; background: #FFF; color: #000; font-family: Arial, sans-serif; width: 600px;">
+                ${buildSingleTemplateHtml(row, configs)}
+            </div>
+            ${pageBreak}
+        `;
+    }).join('');
+
+    showProgress(true, 1, 0, 'Generando PDF Combinado...', 'Rendireando todas las hojas...');
+
+    const opt = {
+        margin:       10,
+        filename:     'Templates_VISA_Combinado.pdf',
+        image:        { type: 'jpeg', quality: 0.98 },
+        html2canvas:  { scale: 1.5, useCORS: true, logging: false },
+        jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
+    };
+
+    try {
+        await html2pdf().from(htmlString).set(opt).save();
+        parsedRows.forEach(r => r.status = 'done');
+    } catch (err) {
+        console.error(err);
+        parsedRows.forEach(r => r.status = 'error');
+        Swal.fire('Error', 'Ocurrió un error al compilar el PDF combinado.', 'error');
+    }
+
+    showProgress(false);
+    renderTable();
+}
+
+// ============================================================
+// HELPERS
+// ============================================================
+function escapeHtml(text) {
+    if (!text) return '';
+    return String(text)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+}
+</script>
+</body>
+</html>

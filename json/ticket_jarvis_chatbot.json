@@ -1,0 +1,100 @@
+{
+  "_comentario": "Ejemplo en profundidad de cómo el Chatbot JARVIS genera los tickets en BMC Remedy AR System y cómo el parser extrae toda la metadata humana",
+  "descripcion_problematica_remedy": {
+    "que_sucede_en_remedy_sin_parsear": "Cuando un usuario chatea con Jarvis (el bot de Teams/Web de la empresa), Jarvis utiliza un usuario de servicio técnico con credenciales fijas ('jarvis' o 'integracion_bot') para insertar el ticket en Remedy mediante la API REST de AR System. Si se leen los campos nativos First_Name / Last_Name / Submitter, el ticket parece pertenecer al bot y no al usuario humano.",
+    "como_resuelve_el_parser_esta_perdida_de_datos": "El parser de RecambiosTracker inspecciona el encabezado estructurado que Jarvis imprime en el campo de texto libre ('Detailed Decription' o 'Description'), aplicando expresiones regulares y cruces contra el directorio local de usuarios y el GAL de Outlook."
+  },
+  "origen_remedy": {
+    "formulario_remedy": "HPD:Help Desk",
+    "endpoint_api": "/api/arsys/v1/entry/HPD:Help Desk",
+    "tipo_ticket": "INC",
+    "grupo_asignado": "SOPORTE TECNICO CAMPO",
+    "entry_id": "INC000001099882"
+  },
+  "remedy_raw_api_values": {
+    "Incident Number": "INC000001099882",
+    "Description": "Solicitud de teclado y mouse por Jarvis Bot para colaboradora",
+    "Detailed Decription": "Ticket generado automáticamente por Asistente Virtual Jarvis (Chatbot)\nPara el usuario: Belen Soledad Carrizo\nEmail: bcarrizo@subsidiaria.com\nUbicación: Edificio Torre Sur - Piso 4 - Puesto 412\nMotivo del contacto: Falla de teclado inalámbrico y mouse\nDetalle adicional: El teclado actual no responde la barra espaciadora y el mouse pierde la sincronización bluetooth constantemente. Requiere kit nuevo para continuar jornada laboral.\nNumero de Serie Equipo actual: NBK-PW-088192",
+    "Submit Date": "2024-04-14T09:12:44.000+0000",
+    "Last Modified Date": "2024-04-15T11:00:15.000+0000",
+    "Status": "Closed",
+    "Status_Reason": "Finalizado Satisfactoriamente",
+    "Priority": "Medium",
+    "First_Name": "JARVIS",
+    "Last_Name": "CHATBOT",
+    "Submitter": "jarvis",
+    "Reported Source": "Self Service / Jarvis",
+    "Assigned Group": "SOPORTE TECNICO CAMPO",
+    "Company": "Subsidiaria",
+    "Site": "Torre Sur",
+    "Resolution": "Se proveyó kit inalámbrico Dell KM5221W nuevo con receptor USB unificado. Funcionando en puesto."
+  },
+  "registro_almacenado_en_base_datos": {
+    "case_id": "INC000001099882",
+    "ticket_type": "INC",
+    "summary": "Solicitud de teclado y mouse por Jarvis Bot para colaboradora",
+    "description": "Ticket generado automáticamente por Asistente Virtual Jarvis (Chatbot)\nPara el usuario: Belen Soledad Carrizo\nEmail: bcarrizo@subsidiaria.com\nUbicación: Edificio Torre Sur...",
+    "submit_date": "2024-04-14 09:12:44",
+    "submit_month": "2024-04",
+    "last_modified_date": "2024-04-15 11:00:15",
+    "status": "Closed",
+    "priority": "Medium",
+    "submitter": "jarvis",
+    "client_name": "Belen Soledad Carrizo",
+    "client_email": "bcarrizo@subsidiaria.com",
+    "client_domain": "subsidiaria.com",
+    "company": "Subsidiaria",
+    "element": "Kit",
+    "assigned_group": "SOPORTE TECNICO CAMPO",
+    "is_jarvis": 1,
+    "source_channel": "Jarvis"
+  },
+  "flujo_de_extraccion_en_parsers_py": {
+    "paso_1_identificar_canal_jarvis": {
+      "condiciones": [
+        "raw['Submitter'].lower() == 'jarvis'",
+        "raw['Reported Source'].lower() in ['self service / jarvis', 'jarvis bot']",
+        "'para el usuario:' in raw['Detailed Decription'].lower()",
+        "'asistente virtual jarvis' in raw['Detailed Decription'].lower()"
+      ],
+      "resultado_obtenido": "is_jarvis = 1, source_channel = 'Jarvis'"
+    },
+    "paso_2_recuperar_nombre_real_del_usuario": {
+      "expresion_regular": "r'para el usuario:\\s*([^)\\r\\n.,;]+)'",
+      "texto_analizado": "Para el usuario: Belen Soledad Carrizo\\n",
+      "nombre_capturado": "Belen Soledad Carrizo",
+      "comportamiento": "Sobrescribe 'JARVIS CHATBOT' de Remedy por el nombre real de la colaboradora 'Belen Soledad Carrizo'"
+    },
+    "paso_3_recuperar_email_y_dominio": {
+      "expresion_regular_email": "r'[\\w\\.-]+@[\\w\\.-]+\\.\\w+'",
+      "correo_capturado": "bcarrizo@subsidiaria.com",
+      "dominio_extraido": "subsidiaria.com",
+      "fallbacks_si_no_hubiera_email": [
+        "1. Consulta tabla local 'users_directory' por el nombre 'Belen Soledad Carrizo'",
+        "2. Consulta historial de tickets previos ('cases') por el mismo nombre",
+        "3. Consulta remota Outlook GAL ANR si el cliente MAPI está disponible"
+      ]
+    },
+    "paso_4_determinar_empresa": {
+      "reglas_prioritarias": {
+        "dominio_subsidiaria": "Si el dominio termina en @subsidiaria.com -> Empresa = 'Subsidiaria'",
+        "dominio_empresa": "Si el dominio termina en @empresa.com, @subsidiaria.com, @proveedor.com -> Empresa = 'Empresa Principal'",
+        "campo_company_remedy": "Si no hay dominio o es genérico, se analiza raw['Company'] ('Subsidiaria' -> 'Subsidiaria', 'EMPRESA' -> 'Empresa Principal')"
+      },
+      "resultado": "Subsidiaria"
+    },
+    "paso_5_determinar_tipificacion": {
+      "orden_de_prevalencia": [
+        "1. 'vincha' / 'auricular' / 'headset' -> Vincha",
+        "2. 'kit' / ('teclado' y 'mouse') -> Kit",
+        "3. 'celular' / 'movil' / 'linea' / 'chip' -> Celular",
+        "4. 'cargador' / 'fuente' / 'adaptador' -> Cargador",
+        "5. 'monitor' / 'pantalla' / 'hdmi' -> Monitor",
+        "6. 'wifi' / 'vpn' / 'red' / 'conectividad' -> Red / Conectividad",
+        "7. 'software' / 'instalacion' / 'licencia' / 'token' -> Software / Configuración",
+        "8. 'notebook' / 'laptop' / 'cpu' / 'equipo' o fallback default -> Equipo"
+      ],
+      "coincidencia_en_este_ticket": "Contiene 'teclado' y 'mouse' -> Clasificado con precisión como 'Kit'"
+    }
+  }
+}

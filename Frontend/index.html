@@ -1,0 +1,2113 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>OrgWo — Open Work Orders & Workspace Orchestrator</title>
+<script>
+// Aplico el tema guardado antes de renderizar para evitar flash de paleta.
+(function () {
+    try {
+        var t = localStorage.getItem('theme');
+        if (t === 'dark') document.documentElement.setAttribute('data-theme', 'dark');
+    } catch (e) {}
+})();
+</script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/lucide@0.453.0/dist/umd/lucide.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script>
+    // Global toast handler with queuing to support deferred ES6 module loading
+    window.toast = function(msg, type = '') {
+        if (window.ToastManager) {
+            window.ToastManager.show(msg, type);
+        } else {
+            if (!window._queuedToasts) window._queuedToasts = [];
+            window._queuedToasts.push({msg, type});
+        }
+    };
+    var toast = window.toast;
+</script>
+<!-- Inter (usada por el panel de la planilla — estilo Generador). El resto
+     de la app cae a Segoe UI por el font-stack del :root. -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/css/styles.css?v=2">
+<style>
+@keyframes blink {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.3; }
+}
+.blink {
+    animation: blink 1.5s infinite;
+}
+</style>
+</head>
+<body>
+
+<div class="loading-overlay" id="loadingOverlay">
+    <div style="text-align:center;">
+        <div class="spinner" style="margin: 0 auto 1rem;"></div>
+        <div style="color: var(--text-muted); font-size: 0.9rem;">Conectando con el servidor…</div>
+    </div>
+</div>
+
+<div class="app">
+
+<aside class="sidebar">
+    <div class="brand">
+        <div class="brand-mark">O</div>
+        <div class="brand-text">
+            <h1>OrgWo <span class="connection-dot" id="connDot" title="Conectado"></span></h1>
+        </div>
+    </div>
+
+    <nav class="topbar-nav">
+        <button class="nav-btn active" data-view="list"><i data-lucide="list"></i> Lista</button>
+        <button class="nav-btn" data-view="calendar"><i data-lucide="calendar"></i> Calendario</button>
+
+        <button class="nav-btn" data-view="remedy" style="position: relative; display: inline-flex; align-items: center; gap: 6px;">
+            <i data-lucide="clipboard-list"></i>
+            <span>Cartelera</span>
+            <span class="remedy-badge-count" id="badge-sidebar-cartelera" style="display: none; background: var(--primary); color: #fff; border-radius: 99px; padding: 1px 6px; font-size: 10px; font-weight: 700;">0</span>
+        </button>
+        <button class="nav-btn" data-view="generador"><i data-lucide="file-text"></i> Generador</button>
+        <button class="nav-btn" id="btnSidebarMetrics" data-view="metrics" style="display: none; align-items: center; gap: 6px;"><i data-lucide="activity"></i> Métricas</button>
+        <button class="nav-btn" id="btnSidebarDispatcher" data-view="dispatcher" style="display: none; align-items: center; gap: 6px;"><i data-lucide="shuffle"></i> Dispatcher</button>
+        <button class="nav-btn" id="btnSidebarStats" data-view="stats" style="display: none; align-items: center; gap: 6px;"><i data-lucide="pie-chart"></i> Estadísticas Grupos</button>
+    </nav>
+
+    <div style="display: flex; align-items: center; gap: 8px; margin-right: 12px;">
+        <!-- Botón Remedy en Navbar -->
+        <div style="position: relative;" id="remedyNavbarWrapper">
+            <button class="btn btn-ghost btn-remedy-navbar" id="btnRemedyNavbar" title="Conexión a Remedy" style="padding: 4px 10px; font-size: 12px; font-weight: 600; display: inline-flex; align-items: center; gap: 6px; border: 1px solid var(--border); border-radius: var(--radius); height: 32px;">
+                <i data-lucide="key-round" style="width:14px; height:14px;"></i>
+                <span id="remedyNavbarLabel">Remedy</span>
+                <span id="remedyNavbarDot" style="width: 7px; height: 7px; border-radius: 50%; background: var(--text-faint); flex-shrink: 0;"></span>
+            </button>
+        </div>
+
+        <!-- Notification Bell -->
+        <div style="position: relative;">
+            <button class="btn btn-ghost theme-toggle" id="btnNotifications" title="Notificaciones" style="position: relative;">
+                <i data-lucide="bell"></i>
+                <span class="notification-badge" id="notificationBadge" style="display: none;">0</span>
+            </button>
+            <div class="notification-dropdown" id="notificationDropdown">
+                <div class="notif-header">Notificaciones pendientes</div>
+                <div class="notif-list" id="notificationList">
+                    <div style="padding: 12px; color: var(--text-muted); text-align: center; font-size: 12px;">Sin entregas para hoy ni mañana</div>
+                </div>
+            </div>
+        </div>
+
+        <button class="btn btn-ghost theme-toggle" id="btnTheme" title="Cambiar tema (claro / oscuro)">
+            <i data-lucide="moon"></i>
+        </button>
+
+        <!-- User profile initials -->
+        <div style="position: relative; margin-left: 4px;">
+            <button class="btn btn-primary" id="btnUser" style="padding: 0; border-radius: 50%; font-weight: 700; width: 32px; height: 32px; display: grid; place-items: center; border: none; min-width: 32px;" title="Perfil">
+                <span id="userInitials">U</span>
+            </button>
+            <div class="user-dropdown" id="userDropdown">
+                <div class="user-info">
+                    <strong id="userProfileName" style="color: var(--text);">—</strong>
+                    <span id="userProfileEmail" style="font-size: 12px; color: var(--text-muted);">—</span>
+                    <span id="userProfileOrg" style="font-size: 11px; color: var(--primary); font-weight: 600; text-transform: uppercase; margin-top: 4px; display: inline-block;">—</span>
+                </div>
+                <div style="padding: 4px 0;">
+                    <div class="dropdown-item" style="display: flex; align-items: center; gap: 8px; width: 100%; cursor: default;">
+                        <i data-lucide="clock"></i>
+                        <span style="font-size: 13px; font-weight: 600; color: var(--text-muted);">Estado:</span>
+                        <select id="selfAvailabilitySelect" onchange="console.log('[DEBUG-SELECT] Changed to:', this.value); if (typeof window.changeSelfAvailability === 'function') { window.changeSelfAvailability(this.value); } else { console.error('[DEBUG-SELECT] window.changeSelfAvailability is NOT a function!'); }" style="flex: 1; padding: 4px; font-size: 12px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--bg-deep); color: var(--text); font-family: inherit; font-weight: 500; cursor: pointer; min-width: 120px;">
+                            <option value="1">Disponible</option>
+                            <option value="2">Ocupado</option>
+                            <option value="3">Almuerzo</option>
+                            <option value="4">Desconectado</option>
+                        </select>
+                        <span id="selfAvailabilityDot" style="width: 8px; height: 8px; border-radius: 50%; background: #22c55e; flex-shrink: 0; margin-left: 2px;"></span>
+                    </div>
+                    <button class="dropdown-item" id="btnEditProfile"><i data-lucide="user-pen"></i> Editar perfil</button>
+                    <button class="dropdown-item" id="btnManageQuickMsgs"><i data-lucide="zap"></i> Mensajes rápidos</button>
+                    <button class="dropdown-item" id="btnPreferences"><i data-lucide="sliders"></i> Preferencias de Template</button>
+                    <button class="dropdown-item" id="btnExportQuickMsgs" style="display: none;"><i data-lucide="download"></i> Exportar mensajes (temp)</button>
+                    <button class="dropdown-item" id="btnLogout"><i data-lucide="log-out"></i> Cerrar sesión</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</aside>
+
+<div class="content">
+
+<div class="main">
+    <section class="view active" id="view-today">
+        <div class="dash-greeting">
+            <h2 id="todayGreeting">Resumen</h2>
+            <p id="todaySubtitle">Cargando…</p>
+        </div>
+        <div class="summary-stats" id="summaryStats"></div>
+        <div class="today-grid" id="todayGrid"></div>
+    </section>
+
+    <section class="view" id="view-remedy">
+        <div class="users-table-wrap">
+            <div style="padding: 12px 16px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap;">
+                <div style="display: flex; align-items: center; gap: 16px;">
+                    <h3 style="font-size: 14px; font-weight: 600;">Remedy — Cartelera de tickets</h3>
+                    <div class="filter-pills" id="remedyPills" style="margin: 0;">
+                        <button class="pill active" data-remedy-filter="INC">
+                            Sin asignar INC <span class="remedy-badge-count" id="badge-inc" style="display: none; background: var(--primary); color: #fff; border-radius: 99px; padding: 1px 6px; font-size: 10px; font-weight: 700; margin-left: 6px; vertical-align: middle;">0</span>
+                        </button>
+                        <button class="pill" data-remedy-filter="WO">
+                            Sin asignar WO <span class="remedy-badge-count" id="badge-wo" style="display: none; background: var(--primary); color: #fff; border-radius: 99px; padding: 1px 6px; font-size: 10px; font-weight: 700; margin-left: 6px; vertical-align: middle;">0</span>
+                        </button>
+                        <button class="pill" data-remedy-filter="ALL_ASSIGNED">
+                            Ticketera todos <span class="remedy-badge-count" id="badge-all-assigned" style="display: none; background: var(--primary); color: #fff; border-radius: 99px; padding: 1px 6px; font-size: 10px; font-weight: 700; margin-left: 6px; vertical-align: middle;">0</span>
+                        </button>
+                    </div>
+                </div>
+                <div style="display: flex; align-items: center; gap: 16px;">
+                    <input type="search" id="remedySearch" class="search-box" placeholder="Buscar por técnico, ticket, usuario…" style="width: 280px; height: 32px; font-size: 12.5px;">
+                    <div id="remedyConnectionStatus" style="font-size: 12.5px; display: flex; align-items: center; gap: 8px;"></div>
+                    <button class="btn btn-primary" id="btnCreateRemedyTicket" style="padding: 6px 12px; font-size: 12.5px; font-weight: 600; display: none; align-items: center; gap: 6px; height: 32px;">
+                        <i data-lucide="plus-circle" style="width: 14px; height: 14px;"></i> Crear nuevo caso
+                    </button>
+                    <span style="color: var(--text-muted); font-size: 13px;" id="remedyCount">0 tickets</span>
+                </div>
+            </div>
+            <div class="table-responsive">
+                <table class="users-table" id="remedyTable">
+                    <thead id="remedyTableHead">
+                        <tr>
+                            <th style="width: 140px;">Ticket</th>
+                            <th style="width: 160px;">Creador / Solicitante</th>
+                            <th>Tipificación / Descripción</th>
+                            <th style="width: 100px;">Empresa</th>
+                            <th style="width: 170px;">SLA</th>
+                            <th style="width: 120px;">Creado</th>
+                            <th style="width: 220px; text-align: center;">Acción</th>
+                        </tr>
+                    </thead>
+                    <tbody id="remedyTableBody"></tbody>
+                </table>
+            </div>
+        </div>
+    </section>
+
+
+
+    <section class="view" id="view-list">
+        <div style="display: flex; gap: 12px; margin-bottom: 16px; flex-wrap: wrap; align-items: stretch;" id="listMetricsCards"></div>
+
+        <div class="users-table-wrap">
+            <div style="padding: 12px 16px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap;">
+                <div style="display: flex; align-items: center; gap: 16px;">
+                    <h3 style="font-size: 14px; font-weight: 600;">Lista de casos</h3>
+                    <div class="filter-pills" id="listTabs" style="margin: 0;">
+                        <button class="pill active" data-list-filter="open">Mis activos</button>
+                        <button class="pill" data-list-filter="closed">Mis cerrados</button>
+                        <button class="pill" data-list-filter="all" id="btnTabAllCases" style="display: none;">Todos los casos</button>
+                    </div>
+                </div>
+                <div style="display: flex; gap: 8px; align-items: center;">
+                    <button class="btn btn-ghost" id="btnImportHistory" style="display: none; height: 32px; font-size: 12.5px; align-items: center; gap: 6px;" title="Importar historial de Remedy"><i data-lucide="download-cloud" style="width: 14px; height: 14px;"></i> Importar Remedy</button>
+                    <button class="btn btn-ghost" id="btnRefreshListToken" style="height: 32px; font-size: 12.5px; display: inline-flex; align-items: center; gap: 6px;" title="Refrescar Token Remedy"><i data-lucide="refresh-cw" style="width: 14px; height: 14px;"></i></button>
+                    <button class="btn btn-ghost" id="btnCreateGroup" style="height: 32px; font-size: 12.5px; font-weight: 600; display: inline-flex; align-items: center; gap: 6px;" onclick="createNewGroup()"><i data-lucide="plus" style="width: 14px; height: 14px;"></i> Crear grupo</button>
+
+                    <span style="color: var(--text-muted); font-size: 13px;" id="usersCount">0 casos</span>
+                    <input type="search" id="listSearch" class="search-box" placeholder="Buscar por nombre, email, empresa, WO…" style="width: 320px;">
+                </div>
+            </div>
+            <div class="table-responsive">
+                <table class="users-table">
+                    <thead>
+                        <tr>
+                            <th style="width: 36px; text-align: center;"><input type="checkbox" id="bulkSelectAll" style="cursor: pointer;"></th>
+                            <th data-sort="wo" style="width: 140px;">Incidente / Ticket</th>
+                            <th data-sort="name" style="width: 140px;">Usuario</th>
+                            <th data-sort="company" style="width: 100px;">Empresa</th>
+                            <th data-sort="puesto" style="width: 230px;">Tipificación</th>
+                            <th>Descripción</th>
+                            <th data-sort="slaDate" style="width: 170px;">SLA</th>
+                            <th style="width: 220px; text-align: center;">Acción</th>
+                        </tr>
+                    </thead>
+                    <tbody id="usersTableBody"></tbody>
+                </table>
+            </div>
+        </div>
+        
+        <!-- Barra de acción masiva flotante -->
+        <div id="bulkActionBar" style="display: none; position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); background: var(--surface-2); border: 1px solid var(--border); border-radius: var(--radius-md); padding: 12px 24px; box-shadow: var(--shadow-floating); z-index: 100; align-items: center; gap: 16px;">
+            <span style="font-weight: 600; font-size: 13.5px;" id="bulkSelectedText">0 casos seleccionados</span>
+            <button type="button" class="btn btn-primary" id="btnBulkClose" style="background: var(--success); border-color: var(--success); padding: 6px 12px; font-size: 12.5px; height: 32px; display: inline-flex; align-items: center; gap: 6px;">
+                <i data-lucide="check-square" style="width: 14px; height: 14px;"></i>
+                <span>Cerrar seleccionados</span>
+            </button>
+            <button type="button" class="btn btn-ghost" id="btnBulkCancel" style="padding: 6px 12px; font-size: 12.5px; height: 32px; display: inline-flex; align-items: center;">
+                Cancelar
+            </button>
+        </div>
+    </section>
+
+    <section class="view" id="view-calendar">
+        <div style="background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; box-shadow: var(--shadow-card); height: calc(100vh - 120px); display: flex; flex-direction: column; gap: 16px;">
+            <!-- Header -->
+            <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border); padding-bottom: 12px; flex-shrink: 0;">
+                <div>
+                    <h2 style="font-size: 16px; font-weight: 700; margin: 0; display: flex; align-items: center; gap: 8px; color: var(--text);">
+                        <i data-lucide="calendar" style="color: var(--primary); width: 18px; height: 18px;"></i> Calendario
+                    </h2>
+                    <p style="font-size: 12.5px; color: var(--text-muted); margin: 4px 0 0 0;">Retiros programados segun la fecha de retiro de cada caso.</p>
+                </div>
+                <div style="display: flex; gap: 8px; align-items: center;">
+                    <button class="btn btn-ghost" id="btnRefreshCalendar" style="height: 32px; font-size: 12.5px; display: inline-flex; align-items: center; gap: 6px;" title="Actualizar calendario">
+                        <i data-lucide="refresh-cw" style="width: 14px; height: 14px;"></i>
+                        <span>Actualizar</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Split layout: calendario (70%) + panel lateral (30%) -->
+            <div id="calendarSplitLayout" style="flex: 1; min-height: 0; display: flex; gap: 12px;">
+
+                <!-- Calendario -->
+                <div id="fullCalendarContainer" style="flex: 1; min-height: 0; overflow: hidden; color: var(--text);"></div>
+
+                <!-- Panel lateral -->
+                <div id="calendarSidePanel" style="
+                    width: 300px;
+                    flex-shrink: 0;
+                    background: var(--surface-2);
+                    border: 1px solid var(--border);
+                    border-radius: var(--radius);
+                    display: flex;
+                    flex-direction: column;
+                    overflow: hidden;
+                    transition: width 0.25s ease, opacity 0.25s ease;
+                ">
+                    <!-- Header panel -->
+                    <div id="calendarPanelHeader" style="
+                        padding: 12px 14px;
+                        border-bottom: 1px solid var(--border);
+                        flex-shrink: 0;
+                        display: flex;
+                        align-items: center;
+                        justify-content: space-between;
+                        gap: 8px;
+                    ">
+                        <div style="display: flex; align-items: center; gap: 8px; min-width: 0;">
+                            <i data-lucide="calendar-days" style="color: var(--primary); width: 15px; height: 15px; flex-shrink: 0;"></i>
+                            <span id="calendarPanelDate" style="font-size: 13px; font-weight: 700; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">Seleccioná un día</span>
+                        </div>
+                        <span id="calendarPanelCount" style="font-size: 11px; font-weight: 700; color: var(--text-muted); white-space: nowrap;"></span>
+                    </div>
+
+                    <!-- Buscador -->
+                    <div id="calendarPanelSearch" style="padding: 8px 14px; border-bottom: 1px solid var(--border); flex-shrink: 0; display: none;">
+                        <input
+                            id="calendarPanelSearchInput"
+                            type="text"
+                            placeholder="Buscar ticket, cliente…"
+                            style="
+                                width: 100%;
+                                box-sizing: border-box;
+                                background: var(--surface);
+                                border: 1px solid var(--border);
+                                border-radius: var(--radius-sm);
+                                padding: 6px 10px;
+                                font-size: 12px;
+                                color: var(--text);
+                                outline: none;
+                            "
+                        />
+                    </div>
+
+                    <!-- Lista de eventos -->
+                    <div id="calendarPanelList" style="flex: 1; overflow-y: auto; padding: 8px 0;">
+                        <!-- Estado vacío por defecto -->
+                        <div id="calendarPanelEmpty" style="padding: 32px 16px; text-align: center;">
+                            <i data-lucide="mouse-pointer-click" style="width: 28px; height: 28px; color: var(--text-faint); margin-bottom: 10px;"></i>
+                            <p style="font-size: 12px; color: var(--text-faint); margin: 0; line-height: 1.5;">Hacé clic en un día del calendario para ver los retiros programados.</p>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </section>
+
+    <!-- ═══════════════════════════ METRICS VIEW ═══════════════════════════ -->
+    <section class="view" id="view-metrics" style="overflow-y:auto;max-height:calc(100vh - 80px);">
+
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:12px;">
+            <div style="display:flex;align-items:center;gap:10px;">
+                <i data-lucide="activity" style="color:var(--primary);width:20px;height:20px;"></i>
+                <h2 style="font-size:16px;font-weight:700;margin:0;color:var(--text);">Panel de Métricas</h2>
+                <span style="font-size:11px;color:var(--text-muted);">Actualizado: <span id="mLastUpdated">—</span></span>
+            </div>
+            <button id="btnMetricsRefresh" class="btn btn-ghost" style="height:32px;font-size:12.5px;display:inline-flex;align-items:center;gap:6px;">
+                <i data-lucide="refresh-cw" style="width:14px;height:14px;"></i> Actualizar
+            </button>
+        </div>
+
+        <!-- Spinner -->
+        <div id="metricsLoadingSpinner" style="display:flex;align-items:center;justify-content:center;padding:60px;gap:12px;">
+            <i data-lucide="loader-2" class="spin" style="width:22px;height:22px;color:var(--primary);"></i>
+            <span style="color:var(--text-muted);font-size:13px;">Cargando métricas…</span>
+        </div>
+
+        <div id="metricsContent" style="display:none;">
+
+            <!-- Fila 1: Sistema · DB · Seguridad + Tráfico -->
+            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px;margin-bottom:12px;">
+
+                <!-- Sistema -->
+                <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-md);padding:14px 16px;">
+                    <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--text-muted);display:flex;align-items:center;gap:6px;margin-bottom:10px;">
+                        <i data-lucide="server" style="width:13px;height:13px;"></i>Sistema
+                        <span id="mSysStatusDot" style="width:8px;height:8px;border-radius:50%;background:var(--success);margin-left:auto;box-shadow:0 0 6px var(--success);transition:background-color .3s, box-shadow .3s;"></span>
+                    </div>
+                    <div style="display:flex;justify-content:space-between;align-items:flex-end;font-size:12.5px;padding:4px 0;">
+                        <span style="color:var(--text-muted);">CPU</span>
+                        <div id="mSysCpu" style="font-weight:600;color:var(--text);text-align:right;min-width:90px;">—</div>
+                    </div>
+                    <div id="mSysCpuCores" style="display:flex;gap:3px;margin-top:4px;margin-bottom:8px;height:12px;"></div>
+                    <div style="display:flex;justify-content:space-between;align-items:flex-end;font-size:12.5px;padding:4px 0;">
+                        <span style="color:var(--text-muted);">RAM</span>
+                        <div id="mSysRam" style="font-weight:600;color:var(--text);text-align:right;min-width:90px;">—</div>
+                    </div>
+                    <div style="display:flex;justify-content:space-between;align-items:flex-end;font-size:12.5px;padding:4px 0;">
+                        <span style="color:var(--text-muted);">Disco</span>
+                        <div id="mSysDisk" style="font-weight:600;color:var(--text);text-align:right;min-width:90px;">—</div>
+                    </div>
+                    <div style="display:flex;justify-content:space-between;font-size:12.5px;padding:4px 0;border-top:1px solid var(--border-soft,rgba(128,128,128,.1));margin-top:4px;">
+                        <span style="color:var(--text-muted);">Uptime Proceso</span><span id="mSysUptime" style="font-weight:600;color:var(--text);">—</span>
+                    </div>
+                    <div style="display:flex;justify-content:space-between;font-size:12.5px;padding:4px 0;">
+                        <span style="color:var(--text-muted);">Uptime Sistema</span><span id="mSysOsUptime" style="font-weight:600;color:var(--text);">—</span>
+                    </div>
+                    <div style="display:flex;justify-content:space-between;font-size:12.5px;padding:4px 0;">
+                        <span style="color:var(--text-muted);">Hilos activos</span><span id="mSysThreads" style="font-weight:600;color:var(--text);">—</span>
+                    </div>
+                    <div style="display:flex;justify-content:space-between;font-size:12.5px;padding:4px 0;">
+                        <span style="color:var(--text-muted);">Entorno</span><span id="mSysEnv" style="font-weight:600;color:var(--text);">—</span>
+                    </div>
+                    <div id="mSysTopProcesses" style="margin-top: 10px; border-top: 1px solid var(--border-soft, rgba(128,128,128,.1)); padding-top: 8px;"></div>
+                </div>
+
+                <!-- Base de Datos -->
+                <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-md);padding:14px 16px;">
+                    <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--text-muted);display:flex;align-items:center;gap:6px;margin-bottom:10px;">
+                        <i data-lucide="database" style="width:13px;height:13px;"></i>Base de Datos
+                        <span id="mDbStatusDot" style="width:8px;height:8px;border-radius:50%;background:var(--success);margin-left:auto;box-shadow:0 0 6px var(--success);transition:background-color .3s, box-shadow .3s;"></span>
+                    </div>
+                    <div style="display:flex;flex-direction:column;gap:2px;">
+                        <div style="display:flex;justify-content:space-between;font-size:12.5px;padding:4px 0;border-bottom:1px solid var(--border-soft,rgba(128,128,128,.1));"><span style="color:var(--text-muted);">Latencia</span><span id="mDbLatency" style="font-weight:600;color:var(--text);">—</span></div>
+                        <div style="display:flex;justify-content:space-between;font-size:12.5px;padding:4px 0;border-bottom:1px solid var(--border-soft,rgba(128,128,128,.1));"><span style="color:var(--text-muted);">Tamaño DB</span><span id="mDbSize" style="font-weight:600;color:var(--text);">—</span></div>
+                        <div style="display:flex;justify-content:space-between;font-size:12.5px;padding:4px 0;border-bottom:1px solid var(--border-soft,rgba(128,128,128,.1));"><span style="color:var(--text-muted);">WAL</span><span id="mDbWal" style="font-weight:600;color:var(--text);">—</span></div>
+                        <div style="display:flex;justify-content:space-between;font-size:12.5px;padding:4px 0;border-bottom:1px solid var(--border-soft,rgba(128,128,128,.1));"><span style="color:var(--text-muted);">Casos</span><span id="mDbCases" style="font-weight:600;color:var(--text);">—</span></div>
+                        <div style="display:flex;justify-content:space-between;font-size:12.5px;padding:4px 0;border-bottom:1px solid var(--border-soft,rgba(128,128,128,.1));"><span style="color:var(--text-muted);">Eventos</span><span id="mDbEvents" style="font-weight:600;color:var(--text);">—</span></div>
+                        <div style="display:flex;justify-content:space-between;font-size:12.5px;padding:4px 0;border-bottom:1px solid var(--border-soft,rgba(128,128,128,.1));"><span style="color:var(--text-muted);">Integridad</span><span id="mDbIntegrity" style="font-weight:700;">—</span></div>
+                        <div style="display:flex;justify-content:space-between;font-size:12.5px;padding:4px 0;border-bottom:1px solid var(--border-soft,rgba(128,128,128,.1));"><span style="color:var(--text-muted);">Último backup</span><span id="mDbBackupDate" style="font-weight:600;color:var(--text);">—</span></div>
+                        <div style="display:flex;justify-content:space-between;font-size:12.5px;padding:4px 0;"><span style="color:var(--text-muted);">Estado backup</span><span id="mDbBackupStatus" style="font-weight:600;">—</span></div>
+                    </div>
+                </div>
+
+                <!-- Seguridad + Tráfico HTTP -->
+                <div style="display:flex;flex-direction:column;gap:12px;">
+                    <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-md);padding:14px 16px;">
+                        <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--text-muted);display:flex;align-items:center;gap:6px;margin-bottom:10px;">
+                            <i data-lucide="shield" style="width:13px;height:13px;"></i>Seguridad
+                            <span id="mSecStatusDot" style="width:8px;height:8px;border-radius:50%;background:var(--success);margin-left:auto;box-shadow:0 0 6px var(--success);transition:background-color .3s, box-shadow .3s;"></span>
+                        </div>
+                        <div style="display:flex;flex-direction:column;gap:2px;">
+                            <div style="display:flex;justify-content:space-between;font-size:12.5px;padding:4px 0;border-bottom:1px solid var(--border-soft,rgba(128,128,128,.1));"><span style="color:var(--text-muted);">Logins fallidos (24h)</span><span id="mSecFailed" style="font-weight:600;color:var(--text);">—</span></div>
+                            <div style="display:flex;justify-content:space-between;font-size:12.5px;padding:4px 0;border-bottom:1px solid var(--border-soft,rgba(128,128,128,.1));"><span style="color:var(--text-muted);">Outlook GAL</span><span id="mSecOutlook" style="font-weight:600;color:var(--text);font-size:11px;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">—</span></div>
+                            <div style="display:flex;justify-content:space-between;font-size:12.5px;padding:4px 0;border-bottom:1px solid var(--border-soft,rgba(128,128,128,.1));"><span style="color:var(--text-muted);">Scans inbox</span><span id="mSecInbox" style="font-weight:600;color:var(--text);">—</span></div>
+                            <div style="display:flex;justify-content:space-between;font-size:12.5px;padding:4px 0;"><span style="color:var(--text-muted);">Requests totales</span><span id="mTrafficTotal" style="font-weight:600;color:var(--text);">—</span></div>
+                        </div>
+                    </div>
+                    <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-md);padding:14px 16px;flex:1;">
+                        <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--text-muted);display:flex;align-items:center;gap:6px;margin-bottom:8px;"><i data-lucide="bar-chart-2" style="width:13px;height:13px;"></i>Tráfico HTTP</div>
+                        <div id="mTrafficCodes" style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:8px;"></div>
+                        <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--text-faint);margin-bottom:4px;">Endpoints top</div>
+                        <div id="mTrafficPaths"></div>
+                    </div>
+                </div>
+
+                <!-- Despachador Automático -->
+                <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-md);padding:14px 16px;display:flex;flex-direction:column;justify-content:space-between;">
+                    <div>
+                        <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--text-muted);display:flex;align-items:center;gap:6px;margin-bottom:10px;">
+                            <i data-lucide="bot" style="width:13px;height:13px;"></i>Despachador INC
+                            <span id="mDispatcherStatusDot" style="width:8px;height:8px;border-radius:50%;background:var(--danger);margin-left:auto;box-shadow:0 0 6px var(--danger);transition:background-color .3s, box-shadow .3s;"></span>
+                        </div>
+                        <p style="font-size:12px;color:var(--text-muted);margin:0 0 12px 0;line-height:1.4;">
+                            Asigna incidentes INC sin dueño automáticamente según la carga y experiencia de los técnicos.
+                        </p>
+                        <div style="display:flex;justify-content:space-between;align-items:center;font-size:12.5px;padding:6px 0;border-bottom:1px solid var(--border-soft,rgba(128,128,128,.1));">
+                            <span style="color:var(--text-muted);">Estado del Bot</span>
+                            <div style="display:flex;align-items:center;">
+                                <button id="btnDispatcherToggle" class="btn btn-ghost" style="height:28px;font-size:11.5px;padding:0 10px;display:inline-flex;align-items:center;gap:6px;border:1px solid var(--border);" onclick="toggleDispatcher()">
+                                    <i data-lucide="toggle-left" style="width:14px;height:14px;"></i> <span>Inactivo</span>
+                                </button>
+                            </div>
+                        </div>
+                        <div style="display:flex;justify-content:space-between;align-items:center;font-size:12.5px;padding:6px 0;border-bottom:1px solid var(--border-soft,rgba(128,128,128,.1));">
+                            <span style="color:var(--text-muted);">Intervalo</span>
+                            <select id="selectDispatcherInterval" style="background:var(--surface) url('data:image/svg+xml;charset=utf-8,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' viewBox=\'0 0 24 24\' fill=\'none\' stroke=\'%23a0a0a0\' stroke-width=\'2\' stroke-linecap=\'round\' stroke-linejoin=\'round\'%3E%3Cpolyline points=\'6 9 12 15 18 9\'/%3E%3C/svg%3E') no-repeat right 8px center;background-size:12px;border:1px solid var(--border);border-radius:var(--radius);color:var(--text);font-size:11.5px;padding:2px 24px 2px 8px;outline:none;appearance:none;-webkit-appearance:none;cursor:pointer;height:24px;min-width:80px;" onchange="updateDispatcherInterval()">
+                                <option value="1">1 min</option>
+                                <option value="5">5 min</option>
+                                <option value="10">10 min</option>
+                                <option value="15" selected>15 min</option>
+                                <option value="20">20 min</option>
+                                <option value="30">30 min</option>
+                                <option value="45">45 min</option>
+                                <option value="60">60 min</option>
+                            </select>
+                        </div>
+                        <div style="display:flex;justify-content:space-between;align-items:center;font-size:12.5px;padding:6px 0;border-bottom:1px solid var(--border-soft,rgba(128,128,128,.1));">
+                            <span style="color:var(--text-muted);">Asignaciones máx. / ronda</span>
+                            <select id="selectDispatcherMaxRound" style="background:var(--surface) url('data:image/svg+xml;charset=utf-8,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' viewBox=\'0 0 24 24\' fill=\'none\' stroke=\'%23a0a0a0\' stroke-width=\'2\' stroke-linecap=\'round\' stroke-linejoin=\'round\'%3E%3Cpolyline points=\'6 9 12 15 18 9\'/%3E%3C/svg%3E') no-repeat right 8px center;background-size:12px;border:1px solid var(--border);border-radius:var(--radius);color:var(--text);font-size:11.5px;padding:2px 24px 2px 8px;outline:none;appearance:none;-webkit-appearance:none;cursor:pointer;height:24px;min-width:80px;" onchange="updateDispatcherInterval()">
+                                <option value="1">1 ticket</option>
+                                <option value="2">2 tickets</option>
+                                <option value="3" selected>3 tickets</option>
+                                <option value="4">4 tickets</option>
+                                <option value="5">5 tickets</option>
+                                <option value="10">10 tickets</option>
+                            </select>
+                        </div>
+                        <div style="display:flex;justify-content:space-between;align-items:center;font-size:12.5px;padding:6px 0;border-bottom:1px solid var(--border-soft,rgba(128,128,128,.1));">
+                            <span style="color:var(--text-muted);">Máx. por técnico / ronda</span>
+                            <select id="selectDispatcherMaxTech" style="background:var(--surface) url('data:image/svg+xml;charset=utf-8,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' viewBox=\'0 0 24 24\' fill=\'none\' stroke=\'%23a0a0a0\' stroke-width=\'2\' stroke-linecap=\'round\' stroke-linejoin=\'round\'%3E%3Cpolyline points=\'6 9 12 15 18 9\'/%3E%3C/svg%3E') no-repeat right 8px center;background-size:12px;border:1px solid var(--border);border-radius:var(--radius);color:var(--text);font-size:11.5px;padding:2px 24px 2px 8px;outline:none;appearance:none;-webkit-appearance:none;cursor:pointer;height:24px;min-width:80px;" onchange="updateDispatcherInterval()">
+                                <option value="1" selected>1 ticket</option>
+                                <option value="2">2 tickets</option>
+                                <option value="3">3 tickets</option>
+                                <option value="4">4 tickets</option>
+                                <option value="5">5 tickets</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div style="font-size:11px;color:var(--text-faint);margin-top:10px;padding-top:6px;border-top:1px solid var(--border-soft,rgba(128,128,128,.1));">
+                        Última asignación: <span id="mDispatcherLastRun">—</span>
+                    </div>
+                </div>
+
+            </div><!-- /fila1 -->
+
+            <!-- Fila 2: Usuarios online · Logs de acciones -->
+            <div style="display:grid;grid-template-columns:280px 1fr;gap:12px;margin-bottom:12px;">
+
+                <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-md);padding:14px 16px;">
+                    <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--text-muted);display:flex;align-items:center;gap:6px;margin-bottom:10px;">
+                        <i data-lucide="users" style="width:13px;height:13px;"></i>Usuarios en línea
+                        <span id="mOnlineBadge" style="background:var(--primary);color:#fff;border-radius:99px;padding:1px 7px;font-size:10px;font-weight:700;">0</span>
+                    </div>
+                    <div id="mOnlineUsers" style="max-height:260px;overflow-y:auto;padding-right:4px;"></div>
+                </div>
+
+                <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-md);padding:14px 16px;">
+                    <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--text-muted);display:flex;align-items:center;gap:6px;margin-bottom:10px;"><i data-lucide="scroll-text" style="width:13px;height:13px;"></i>Registro de Acciones (últimas 40)</div>
+                    <div id="mActionLogs"></div>
+                </div>
+
+            </div><!-- /fila2 -->
+
+            <!-- Fila 3: Logs servidor -->
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;">
+                <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-md);padding:14px 16px;">
+                    <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--text-muted);display:flex;align-items:center;gap:6px;margin-bottom:10px;">
+                        <i data-lucide="terminal" style="width:13px;height:13px;"></i>Logs del Servidor
+                        <a href="/api/secret/metrics/export-logs" download class="btn btn-ghost" style="height:22px;font-size:10px;padding:0 6px;margin-left:auto;display:inline-flex;align-items:center;gap:4px;border:1px solid var(--border);color:var(--text-muted);text-decoration:none;">
+                            <i data-lucide="download" style="width:10px;height:10px;"></i> Exportar
+                        </a>
+                    </div>
+                    <div id="mServerLogs"></div>
+                </div>
+                <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-md);padding:14px 16px;">
+                    <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--text-muted);display:flex;align-items:center;gap:6px;margin-bottom:10px;">
+                        <i data-lucide="shield-alert" style="width:13px;height:13px;"></i>Auditoría de Seguridad
+                        <span id="mSecAlertDot" style="width:8px;height:8px;border-radius:50%;background:var(--success);margin-left:auto;box-shadow:0 0 6px var(--success);transition:background-color .3s, box-shadow .3s;"></span>
+                    </div>
+                    <!-- Concurrent Sessions Warning -->
+                    <div id="mSecConcurrentAlert" style="display:none;background:rgba(239,68,68,0.1);border:1px solid var(--danger);border-radius:var(--radius);padding:8px 12px;margin-bottom:12px;font-size:12px;color:var(--danger);align-items:center;gap:8px;">
+                        <i data-lucide="alert-triangle" class="blink" style="width:16px;height:16px;flex-shrink:0;"></i>
+                        <div>
+                            <strong>Alerta:</strong> Sesiones concurrentes detectadas.
+                            <div id="mSecConcurrentUserList" style="font-size:10.5px;margin-top:2px;"></div>
+                        </div>
+                    </div>
+                    
+                    <!-- Failed Logins by IP list -->
+                    <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--text-faint);margin-bottom:6px;">Intentos fallidos por IP (24h)</div>
+                    <div id="mSecFailedIps" style="max-height:140px;overflow-y:auto;font-size:12px;display:flex;flex-direction:column;gap:4px;">
+                        <div style="color:var(--text-muted);text-align:center;padding:12px 0;">Sin sospechas</div>
+                    </div>
+                </div>
+            </div><!-- /fila3 -->
+            <!-- Fila 4: Historial de Telemetría (Tendencias 24h) -->
+            <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-md);padding:14px 16px;margin-bottom:12px;">
+                <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--text-muted);display:flex;align-items:center;gap:6px;margin-bottom:12px;">
+                    <i data-lucide="line-chart" style="width:13px;height:13px;"></i>Tendencias de CPU y RAM (Últimas 24 Horas)
+                    <div style="margin-left:auto;display:flex;gap:12px;font-size:10px;">
+                        <span style="display:flex;align-items:center;gap:4px;"><span style="width:8px;height:8px;background:var(--primary);border-radius:2px;"></span>CPU</span>
+                        <span style="display:flex;align-items:center;gap:4px;"><span style="width:8px;height:8px;background:#10B981;border-radius:2px;"></span>RAM</span>
+                    </div>
+                </div>
+                <!-- Contenedor del gráfico SVG -->
+                <div id="mTelemetryChart" style="height:120px;position:relative;margin-top:10px;display:flex;align-items:center;justify-content:center;">
+                    <div style="color:var(--text-muted);font-size:12.5px;text-align:center;padding:40px 0;">Cargando histórico…</div>
+                </div>
+            </div>
+
+            <!-- Gestión de usuarios -->
+            <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-md);padding:14px 16px;margin-bottom:24px;">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+                    <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--text-muted);display:flex;align-items:center;gap:6px;">
+                        <i data-lucide="users-round" style="width:13px;height:13px;"></i>Gestión de Usuarios
+                    </div>
+                    <button id="btnMetricsCreateUser" class="btn btn-primary" style="height:30px;font-size:12px;display:inline-flex;align-items:center;gap:6px;padding:0 12px;">
+                        <i data-lucide="user-plus" style="width:13px;height:13px;"></i> Nuevo usuario
+                    </button>
+                </div>
+                <div class="table-responsive">
+                    <table class="users-table">
+                        <thead>
+                            <tr>
+                                <th style="width:110px;">Usuario</th>
+                                <th>Nombre</th>
+                                <th>Email</th>
+                                <th style="width:110px;">Organización</th>
+                                <th style="width:90px;">Rol</th>
+                                <th style="width:70px;">Nivel</th>
+                                <th style="width:100px;text-align:center;">Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody id="metricsUsersTbody"></tbody>
+                    </table>
+                </div>
+            </div>
+
+        </div><!-- /#metricsContent -->
+    </section><!-- /#view-metrics -->
+
+    <!-- ═══════════════════════════ DISPATCHER VIEW ═══════════════════════════ -->
+    <section class="view" id="view-dispatcher" style="overflow-y:auto;max-height:calc(100vh - 80px); padding: 20px;">
+
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:12px;">
+            <div style="display:flex;align-items:center;gap:10px;">
+                <i data-lucide="shuffle" style="color:var(--primary);width:20px;height:20px;"></i>
+                <h2 style="font-size:16px;font-weight:700;margin:0;color:var(--text);">Panel de Despachador Automático</h2>
+                <span style="font-size:11px;color:var(--text-muted);margin-left:10px;">Última ejecución: <span id="dispLastRun">—</span></span>
+            </div>
+            <div style="display:flex;gap:8px;">
+                <button id="btnDispatcherRunNow" class="btn btn-primary" style="height:32px;font-size:12.5px;display:inline-flex;align-items:center;gap:6px;">
+                    <i data-lucide="play" style="width:14px;height:14px;"></i> Forzar Ronda
+                </button>
+                <button id="btnDispatcherRefresh" class="btn btn-ghost" style="height:32px;font-size:12.5px;display:inline-flex;align-items:center;gap:6px;">
+                    <i data-lucide="refresh-cw" style="width:14px;height:14px;"></i> Actualizar
+                </button>
+            </div>
+        </div>
+
+        <!-- Spinner -->
+        <div id="dispatcherLoadingSpinner" style="display:flex;align-items:center;justify-content:center;padding:60px;gap:12px;">
+            <i data-lucide="loader-2" class="spin" style="width:22px;height:22px;color:var(--primary);"></i>
+            <span style="color:var(--text-muted);font-size:13px;">Cargando panel de control…</span>
+        </div>
+
+        <div id="dispatcherContent" style="display:none; display:flex; flex-direction:column; gap:16px;">
+
+            <!-- Fila superior: Estado de Fichaje -->
+            <div style="width: 100%;">
+
+                <!-- Estado de Fichaje (Disponibilidad de Técnicos) -->
+                <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-md);padding:16px;box-shadow:var(--shadow-card);display:flex;flex-direction:column;gap:12px;">
+                    <div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--text-muted);display:flex;align-items:center;gap:6px;border-bottom:1px solid var(--border-soft);padding-bottom:8px;margin-bottom:4px;">
+                        <i data-lucide="users" style="width:14px;height:14px;"></i>Fichaje & Estado de Técnicos
+                    </div>
+                    
+                    <div style="overflow-x:auto;max-height:220px;overflow-y:auto;border:1px solid var(--border-soft);border-radius:var(--radius);">
+                        <table style="width:100%;border-collapse:collapse;font-size:12.5px;text-align:left;">
+                            <thead>
+                                <tr style="background:var(--surface-2);border-bottom:1px solid var(--border);color:var(--text-muted);font-weight:600;">
+                                    <th style="padding:8px 10px;">Nombre</th>
+                                    <th style="padding:8px 10px;width:70px;">Nivel</th>
+                                    <th style="padding:8px 10px;width:150px;">Estado</th>
+                                    <th style="padding:8px 10px;width:180px;text-align:center;">Cambiar Estado</th>
+                                </tr>
+                            </thead>
+                            <tbody id="dispatcherTechStatusTbody"></tbody>
+                        </table>
+                    </div>
+                    <div style="font-size:11px;color:var(--text-faint);margin-top:2px;">
+                        Nota: Los técnicos en estado "Ocupado", "Almuerzo" o "Desconectado" no recibirán tickets automáticos.
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- Fila inferior: Categorización y Reglas de Tipificación -->
+            <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-md);padding:16px;box-shadow:var(--shadow-card);">
+                <div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--text-muted);display:flex;align-items:center;gap:6px;border-bottom:1px solid var(--border-soft);padding-bottom:8px;margin-bottom:12px;">
+                    <i data-lucide="sliders" style="width:14px;height:14px;"></i>Niveles y Complejidad por Tipificación
+                </div>
+
+                <div style="overflow-x:auto;max-height:400px;overflow-y:auto;border:1px solid var(--border);border-radius:var(--radius);margin-bottom:12px;">
+                    <table style="width:100%;border-collapse:collapse;font-size:13px;text-align:left;">
+                        <thead>
+                            <tr style="background:var(--surface-2);border-bottom:1px solid var(--border);color:var(--text-muted);font-weight:600;position:sticky;top:0;z-index:5;">
+                                <th style="padding:10px 12px;">Tipificación de Webcenter</th>
+                                <th style="padding:10px 12px;width:150px;">Nivel Requerido</th>
+                                <th style="padding:10px 12px;width:110px;">Puntaje N1</th>
+                                <th style="padding:10px 12px;width:110px;">Puntaje N2</th>
+                            </tr>
+                        </thead>
+                        <tbody id="dispatcherRulesTbody">
+                            <!-- Se poblará dinámicamente desde javascript usando ALL_TIPIFICACIONES -->
+                        </tbody>
+                    </table>
+                </div>
+
+                <div style="display:flex;justify-content:space-between;align-items:center;">
+                    <span style="font-size:12px;color:var(--text-muted);">
+                        El puntaje define el peso para el cálculo de carga laboral acumulada de los técnicos.
+                    </span>
+                    <button id="btnSaveDispatcherRules" class="btn btn-primary" style="height:34px;padding:0 20px;">
+                        <i data-lucide="save" style="width:14px;height:14px;margin-right:6px;vertical-align:middle;display:inline-block;"></i> Guardar Reglas
+                    </button>
+                </div>
+            </div>
+
+            <!-- Panel de Logs del Despachador (Debug & Audit) -->
+            <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-md);padding:16px;box-shadow:var(--shadow-card);">
+                <div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--text-muted);display:flex;align-items:center;gap:6px;border-bottom:1px solid var(--border-soft);padding-bottom:8px;margin-bottom:10px;">
+                    <i data-lucide="terminal" style="width:14px;height:14px;"></i>Logs del Despachador (Tiempo Real)
+                </div>
+                <div id="dispatcherLogsContainer" style="background:#000;color:#39ff14;font-family:monospace;font-size:12px;padding:12px;border-radius:var(--radius);height:180px;overflow-y:auto;white-space:pre-wrap;line-height:1.4;">
+                    Cargando logs de ejecución…
+                </div>
+            </div>
+
+        </div>
+    </section>
+
+    <!-- ═══════════════════════════ REMEDY GROUP STATS VIEW ═══════════════════════════ -->
+    <section class="view" id="view-stats" style="overflow-y:auto;max-height:calc(100vh - 80px); padding: 20px;">
+        <!-- Header y Filtros -->
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:12px;">
+            <div>
+                <div style="display:flex;align-items:center;gap:10px;">
+                    <i data-lucide="pie-chart" style="color:var(--primary);width:22px;height:22px;"></i>
+                    <h2 style="font-size:17px;font-weight:700;margin:0;color:var(--text);">Estadísticas de Grupos de Soporte</h2>
+                    <span style="background:var(--primary-soft);color:var(--primary);padding:2px 8px;border-radius:12px;font-size:11px;font-weight:700;letter-spacing:0.5px;">ADMIN</span>
+                </div>
+                <p style="font-size:12.5px;color:var(--text-muted);margin:4px 0 0 0;">
+                    Métricas consolidadas de <code>TECNOLOGIA USUARIOS DT</code>, <code>CTU DT</code> y <code>TECNOLOGIA CELULARES</code> con desglose anónimo de Jarvis Chatbot.
+                </p>
+            </div>
+            
+            <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+                <span id="statsLastSyncTime" style="font-size:11.5px;color:var(--text-muted);margin-right:6px;">Sin sincronizar</span>
+                <button id="btnStatsRefresh" class="btn btn-ghost" style="height:32px;font-size:12.5px;display:inline-flex;align-items:center;gap:6px;" title="Refrescar vista">
+                    <i data-lucide="refresh-cw" style="width:14px;height:14px;"></i> Actualizar
+                </button>
+                <button id="btnStatsOpenReport" class="btn btn-secondary" style="height:32px;font-size:12.5px;display:inline-flex;align-items:center;gap:6px;" title="Generar reporte completo por empresa, tipificaciones y dominios">
+                    <i data-lucide="file-spreadsheet" style="width:14px;height:14px;color:var(--primary);"></i> Reporte por Empresa
+                </button>
+                <button id="btnStatsStartSync" class="btn btn-primary" style="height:32px;font-size:12.5px;display:inline-flex;align-items:center;gap:6px;" title="Traer todos los tickets asignados de los 3 grupos en lotes">
+                    <i data-lucide="download-cloud" style="width:14px;height:14px;"></i> Sincronizar Ticketera
+                </button>
+                <button id="btnStatsClearData" class="btn btn-ghost" style="height:32px;font-size:12px;color:var(--text-faint);display:inline-flex;align-items:center;gap:4px;" title="Limpiar caché local de estadísticas">
+                    <i data-lucide="trash-2" style="width:13px;height:13px;"></i>
+                </button>
+            </div>
+        </div>
+
+        <!-- Barra de Filtros -->
+        <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:10px 14px;margin-bottom:16px;display:flex;align-items:center;gap:16px;flex-wrap:wrap;">
+            <div style="display:flex;align-items:center;gap:6px;">
+                <label style="font-size:11.5px;font-weight:700;color:var(--text-muted);text-transform:uppercase;">Grupo:</label>
+                <select id="statsFilterGroup" style="padding:4px 8px;font-size:12.5px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg-deep);color:var(--text);font-family:inherit;">
+                    <option value="ALL">Todos los grupos (3)</option>
+                    <option value="TECNOLOGIA USUARIOS DT">TECNOLOGIA USUARIOS DT</option>
+                    <option value="CTU DT">CTU DT</option>
+                    <option value="TECNOLOGIA CELULARES">TECNOLOGIA CELULARES</option>
+                </select>
+            </div>
+
+            <div style="display:flex;align-items:center;gap:6px;">
+                <label style="font-size:11.5px;font-weight:700;color:var(--text-muted);text-transform:uppercase;">Mes:</label>
+                <select id="statsFilterMonth" style="padding:4px 8px;font-size:12.5px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg-deep);color:var(--text);font-family:inherit;">
+                    <option value="all">Todos los meses</option>
+                </select>
+            </div>
+
+            <div style="display:flex;align-items:center;gap:6px;">
+                <label style="font-size:11.5px;font-weight:700;color:var(--text-muted);text-transform:uppercase;">Período:</label>
+                <select id="statsFilterPeriod" style="padding:4px 8px;font-size:12.5px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg-deep);color:var(--text);font-family:inherit;">
+                    <option value="all">Todo lo disponible en base</option>
+                    <option value="30d">Últimos 30 días</option>
+                    <option value="90d">Últimos 90 días</option>
+                    <option value="180d">Últimos 180 días</option>
+                    <option value="365d">Último año</option>
+                </select>
+            </div>
+
+            <div style="display:flex;align-items:center;gap:6px;">
+                <label style="font-size:11.5px;font-weight:700;color:var(--text-muted);text-transform:uppercase;">Estado:</label>
+                <select id="statsFilterStatus" style="padding:4px 8px;font-size:12.5px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg-deep);color:var(--text);font-family:inherit;">
+                    <option value="">Todos los estados</option>
+                    <option value="open">Solo Abiertos (En gestión)</option>
+                    <option value="closed">Solo Resueltos / Cerrados</option>
+                </select>
+            </div>
+
+            <div style="display:flex;align-items:center;gap:6px;">
+                <label style="font-size:11.5px;font-weight:700;color:var(--text-muted);text-transform:uppercase;">Tipo:</label>
+                <select id="statsFilterType" style="padding:4px 8px;font-size:12.5px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg-deep);color:var(--text);font-family:inherit;">
+                    <option value="">Todos (INC + WO)</option>
+                    <option value="INC">Incidentes (INC)</option>
+                    <option value="WO">Work Orders (WO)</option>
+                </select>
+            </div>
+
+            <div style="margin-left:auto;font-size:12px;color:var(--text-muted);" id="statsTotalCachedCount">
+                0 tickets en caché
+            </div>
+        </div>
+
+        <!-- Banner de Progreso de Sincronización Fragmentada -->
+        <div id="statsSyncProgressBanner" style="display:none;background:var(--surface);border:2px solid var(--primary);border-radius:var(--radius-md);padding:14px 18px;margin-bottom:16px;box-shadow:var(--shadow-card);">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;flex-wrap:wrap;gap:8px;">
+                <div style="display:flex;align-items:center;gap:8px;">
+                    <i data-lucide="loader" class="spin" style="width:16px;height:16px;color:var(--primary);"></i>
+                    <strong style="font-size:13px;color:var(--text);" id="statsProgressText">Extrayendo tickets en lotes fragmentados...</strong>
+                </div>
+                <div style="display:flex;align-items:center;gap:12px;">
+                    <span style="font-size:12px;color:var(--primary);font-weight:700;" id="statsProgressCount">0 tickets acumulados</span>
+                    <button id="btnStatsCancelSync" class="btn btn-ghost" style="height:26px;font-size:11px;color:var(--danger);border:1px solid var(--border);padding:0 8px;">
+                        Detener
+                    </button>
+                </div>
+            </div>
+            <!-- Progress Bar -->
+            <div style="width:100%;height:8px;background:var(--border);border-radius:99px;overflow:hidden;">
+                <div id="statsProgressBarFill" style="width:5%;height:100%;background:linear-gradient(90deg, var(--primary), #00a4ef);border-radius:99px;transition:width 0.3s ease;"></div>
+            </div>
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-top:6px;font-size:11px;color:var(--text-faint);">
+                <span>Protección activa: lotes secuenciales de 100 registros con pausa de descanso anti-saturación de WebCenter.</span>
+                <span>Continuará en background si cambiás de vista.</span>
+            </div>
+        </div>
+
+        <!-- Spinner de Carga Inicial -->
+        <div id="statsLoadingSpinner" style="display:flex;align-items:center;justify-content:center;padding:60px;gap:12px;">
+            <i data-lucide="loader-2" class="spin" style="width:24px;height:24px;color:var(--primary);"></i>
+            <span style="color:var(--text-muted);font-size:13.5px;">Calculando métricas de grupos...</span>
+        </div>
+
+        <!-- Estado Vacío (Sin datos) -->
+        <div id="statsEmptyState" style="display:none;background:var(--surface);border:1px dashed var(--border);border-radius:var(--radius-md);padding:48px 24px;text-align:center;margin-bottom:16px;">
+            <i data-lucide="database" style="width:40px;height:40px;color:var(--text-faint);margin-bottom:12px;"></i>
+            <h3 style="font-size:16px;font-weight:700;color:var(--text);margin-bottom:6px;">No hay tickets de los grupos sincronizados aún</h3>
+            <p style="font-size:13px;color:var(--text-muted);max-width:500px;margin:0 auto 16px auto;line-height:1.5;">
+                Iniciá la sincronización para traer los tickets asignados a <code>TECNOLOGIA USUARIOS DT</code>, <code>CTU DT</code> y <code>TECNOLOGIA CELULARES</code> de forma fragmentada y segura.
+            </p>
+            <button class="btn btn-primary" onclick="openStatsSyncModal()" style="height:36px;font-size:13px;display:inline-flex;align-items:center;gap:8px;">
+                <i data-lucide="download-cloud" style="width:15px;height:15px;"></i> Iniciar Primera Sincronización
+            </button>
+        </div>
+
+        <!-- Contenedor Principal de Métricas -->
+        <div id="statsMainContent" style="display:none;">
+
+            <!-- Fila 1: KPIs Principales -->
+            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin-bottom:16px;">
+                <!-- Total -->
+                <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-md);padding:14px 16px;box-shadow:var(--shadow-card);">
+                    <div style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--text-muted);letter-spacing:0.5px;display:flex;align-items:center;gap:6px;margin-bottom:6px;">
+                        <i data-lucide="layers" style="width:13px;height:13px;"></i> Total Tickets
+                    </div>
+                    <div style="font-size:24px;font-weight:800;color:var(--text);" id="statTotalTickets">0</div>
+                    <div style="font-size:11.5px;color:var(--text-muted);margin-top:2px;" id="statIncWoRatio">0 INC · 0 WO</div>
+                </div>
+
+                <!-- Abiertos -->
+                <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-md);padding:14px 16px;box-shadow:var(--shadow-card);">
+                    <div style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--info);letter-spacing:0.5px;display:flex;align-items:center;gap:6px;margin-bottom:6px;">
+                        <i data-lucide="clock" style="width:13px;height:13px;"></i> Abiertos / En Gestión
+                    </div>
+                    <div style="font-size:24px;font-weight:800;color:var(--info);" id="statOpenTickets">0</div>
+                    <div style="font-size:11.5px;color:var(--text-muted);margin-top:2px;">En progreso, asignados y pendientes</div>
+                </div>
+
+                <!-- Resueltos / Cerrados -->
+                <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-md);padding:14px 16px;box-shadow:var(--shadow-card);">
+                    <div style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--success);letter-spacing:0.5px;display:flex;align-items:center;gap:6px;margin-bottom:6px;">
+                        <i data-lucide="check-circle" style="width:13px;height:13px;"></i> Resueltos / Cerrados
+                    </div>
+                    <div style="font-size:24px;font-weight:800;color:var(--success);" id="statClosedTickets">0</div>
+                    <div style="font-size:11.5px;color:var(--text-muted);margin-top:2px;">Completados en los 3 grupos</div>
+                </div>
+
+                <!-- Jarvis Chatbot Total -->
+                <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-md);padding:14px 16px;box-shadow:var(--shadow-card);">
+                    <div style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--accent);letter-spacing:0.5px;display:flex;align-items:center;gap:6px;margin-bottom:6px;">
+                        <i data-lucide="bot" style="width:13px;height:13px;"></i> Jarvis Chatbot
+                    </div>
+                    <div style="font-size:24px;font-weight:800;color:var(--accent);" id="statJarvisTotal">0</div>
+                    <div style="font-size:11.5px;color:var(--text-muted);margin-top:2px;">Tickets ingresados por bot</div>
+                </div>
+            </div>
+
+            <!-- Fila 2: CARD DESTACADA - ANÁLISIS JARVIS CHATBOT (EMPRESA PRINCIPAL vs SUBSIDIARIA) -->
+            <div style="background:var(--surface);border:2px solid rgba(92,45,145,0.25);border-radius:var(--radius-md);padding:18px 20px;margin-bottom:16px;box-shadow:var(--shadow-card);">
+                <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:12px;margin-bottom:14px;">
+                    <div>
+                        <div style="display:flex;align-items:center;gap:8px;">
+                            <i data-lucide="bot" style="color:var(--accent);width:20px;height:20px;"></i>
+                            <h3 style="font-size:15px;font-weight:700;margin:0;color:var(--text);">
+                                Clasificación de Tickets JARVIS CHATBOT (Empresa Principal vs. Subsidiaria)
+                            </h3>
+                            <span style="background:rgba(92,45,145,0.1);color:var(--accent);padding:2px 8px;border-radius:12px;font-size:11px;font-weight:700;">
+                                Total: <span id="jarvisCountTotal">0</span>
+                            </span>
+                        </div>
+                        <p style="font-size:12px;color:var(--text-muted);margin:4px 0 0 0;line-height:1.4;">
+                            Identificación de empresa según el <strong>usuario real del requerimiento</strong> (Directorio GAL / Dominio de correo).
+                            <span style="color:var(--primary);font-weight:600;">Modo Anónimo Activo:</span> no se exponen nombres individuales.
+                        </p>
+                    </div>
+                    <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+                        <button class="btn btn-secondary btn-sm" id="btnJarvisResolveGal" style="display:inline-flex;align-items:center;gap:6px;font-size:11.5px;padding:4px 10px;height:28px;" title="Consulta la libreta Outlook GAL para identificar usuarios pendientes">
+                            <i data-lucide="search" style="width:13px;height:13px;"></i>
+                            <span id="btnJarvisResolveGalText">Resolver con Outlook (GAL)</span>
+                        </button>
+                        <div style="font-size:11.5px;color:var(--text-muted);background:var(--surface-2);padding:4px 10px;border-radius:var(--radius);border:1px solid var(--border);" id="jarvisOpenClosedRatio">
+                            0 abiertos · 0 resueltos
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Barra visual compuesta Empresa Principal / Subsidiaria / Otros -->
+                <div style="width:100%;height:14px;background:var(--border);border-radius:99px;overflow:hidden;display:flex;margin-bottom:16px;box-shadow:inset 0 1px 2px rgba(0,0,0,0.1);">
+                    <div id="jarvisBarEmpresa Principal" style="width:0%;height:100%;background:#0078D4;transition:width 0.5s ease;" title="Empresa Principal"></div>
+                    <div id="jarvisBarSubsidiaria" style="width:0%;height:100%;background:#8764B8;transition:width 0.5s ease;" title="Subsidiaria"></div>
+                    <div id="jarvisBarOther" style="width:0%;height:100%;background:#8A8886;transition:width 0.5s ease;" title="Otros / No determinado"></div>
+                </div>
+
+                <!-- 3 Cajas comparativas (Empresa Principal vs Subsidiaria vs Otros) -->
+                <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;">
+                    <!-- Caja Empresa Principal -->
+                    <div style="background:rgba(0,120,212,0.05);border:1px solid rgba(0,120,212,0.3);border-radius:var(--radius);padding:12px 16px;">
+                        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
+                            <span style="font-size:12px;font-weight:700;color:#0078D4;text-transform:uppercase;letter-spacing:0.5px;display:flex;align-items:center;gap:6px;">
+                                <span style="width:8px;height:8px;border-radius:50%;background:#0078D4;"></span> EMPRESA PRINCIPAL
+                            </span>
+                            <span style="font-size:12px;font-weight:800;color:#0078D4;" id="jarvisPctEmpresa Principal">0%</span>
+                        </div>
+                        <div style="font-size:26px;font-weight:800;color:var(--text);" id="jarvisCountEmpresa Principal">0</div>
+                        <div style="font-size:11px;color:var(--text-muted);margin-top:2px;">Tickets de usuarios de Empresa Principal</div>
+                    </div>
+
+                    <!-- Caja Subsidiaria -->
+                    <div style="background:rgba(135,100,184,0.08);border:1px solid rgba(135,100,184,0.3);border-radius:var(--radius);padding:12px 16px;">
+                        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
+                            <span style="font-size:12px;font-weight:700;color:#8764B8;text-transform:uppercase;letter-spacing:0.5px;display:flex;align-items:center;gap:6px;">
+                                <span style="width:8px;height:8px;border-radius:50%;background:#8764B8;"></span> SUBSIDIARIA
+                            </span>
+                            <span style="font-size:12px;font-weight:800;color:#8764B8;" id="jarvisPctSubsidiaria">0%</span>
+                        </div>
+                        <div style="font-size:26px;font-weight:800;color:var(--text);" id="jarvisCountSubsidiaria">0</div>
+                        <div style="font-size:11px;color:var(--text-muted);margin-top:2px;">Tickets de usuarios de Subsidiaria</div>
+                    </div>
+
+                    <!-- Caja Otros / Sin determinar -->
+                    <div style="background:var(--surface-2);border:1px solid var(--border);border-radius:var(--radius);padding:12px 16px;">
+                        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
+                            <span style="font-size:12px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;display:flex;align-items:center;gap:6px;">
+                                <span style="width:8px;height:8px;border-radius:50%;background:#8A8886;"></span> OTROS / NO DETERMINADO
+                            </span>
+                            <span style="font-size:12px;font-weight:800;color:var(--text-muted);" id="jarvisPctOther">0%</span>
+                        </div>
+                        <div style="font-size:26px;font-weight:800;color:var(--text);" id="jarvisCountOther">0</div>
+                        <div style="font-size:11px;color:var(--text-muted);margin-top:2px;">Sin empresa o dominio identificable</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Fila 3: DESGLOSE Y EVOLUCIÓN MENSUAL — EMPRESA PRINCIPAL VS. SUBSIDIARIA Y TIPIFICACIONES -->
+            <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-md);padding:18px 20px;margin-bottom:16px;box-shadow:var(--shadow-card);">
+                <!-- Header de la Sección Mensual -->
+                <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:12px;margin-bottom:14px;border-bottom:1px solid var(--border-soft);padding-bottom:10px;">
+                    <div>
+                        <div style="display:flex;align-items:center;gap:8px;">
+                            <i data-lucide="calendar" style="color:var(--primary);width:18px;height:18px;"></i>
+                            <h3 style="font-size:15px;font-weight:700;margin:0;color:var(--text);">
+                                Desglose Mensual: Empresa Principal vs. Subsidiaria y Tipificaciones
+                            </h3>
+                            <span id="monthlyActiveBadge" style="background:rgba(0,120,212,0.1);color:var(--primary);padding:2px 8px;border-radius:12px;font-size:11px;font-weight:700;">
+                                Todos los meses
+                            </span>
+                        </div>
+                        <p style="font-size:12px;color:var(--text-muted);margin:4px 0 0 0;line-height:1.4;">
+                            Evolución mes a mes del volumen de tickets según empresa real (Empresa Principal vs. Subsidiaria) y detalle de tipificaciones técnicas asociadas.
+                        </p>
+                    </div>
+
+                    <!-- Pestañas/Pills de Meses Rápidos -->
+                    <div id="monthlyTabsContainer" style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
+                        <!-- Se llena dinámicamente con [Todos], [Feb 2026], [Ene 2026], etc. -->
+                    </div>
+                </div>
+
+                <!-- Tabla Comparativa Mes a Mes -->
+                <div class="table-responsive" style="margin-bottom:12px;">
+                    <table class="users-table" style="font-size:12.5px;">
+                        <thead>
+                            <tr style="background:var(--surface-2);">
+                                <th style="width:130px;">Mes</th>
+                                <th style="text-align:center;width:80px;">Total</th>
+                                <th style="text-align:center;width:170px;">Empresa Principal</th>
+                                <th style="text-align:center;width:170px;">Subsidiaria</th>
+                                <th style="text-align:center;width:110px;">Otros / No det.</th>
+                                <th style="text-align:left;">Tipificaciones Principales</th>
+                                <th style="text-align:center;width:140px;">Acción</th>
+                            </tr>
+                        </thead>
+                        <tbody id="monthlySummaryTbody">
+                            <tr><td colspan="7" style="text-align:center;padding:20px;color:var(--text-muted);">Sin datos de meses sincronizados</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Ficha Detallada de Tipificaciones del Mes Seleccionado -->
+                <div id="monthlyDetailCard" style="display:none;background:var(--surface-2);border:1px solid var(--border);border-radius:var(--radius);padding:16px;margin-top:10px;">
+                    <!-- Header de la Ficha Detallada -->
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;border-bottom:1px solid var(--border-soft);padding-bottom:8px;flex-wrap:gap;gap:8px;">
+                        <div style="display:flex;align-items:center;gap:8px;">
+                            <i data-lucide="tag" style="color:var(--accent);width:16px;height:16px;"></i>
+                            <strong style="font-size:13.5px;color:var(--text);" id="monthlyDetailTitle">
+                                Tipificaciones de Tickets — Mes
+                            </strong>
+                            <span id="monthlyDetailTotalBadge" style="font-size:11px;font-weight:700;background:var(--surface);padding:2px 8px;border-radius:10px;border:1px solid var(--border);">
+                                0 tickets
+                            </span>
+                        </div>
+                        <div style="display:flex;align-items:center;gap:8px;">
+                            <button class="btn btn-secondary btn-sm" id="btnMonthlyFilterThisMonth" style="font-size:11.5px;display:inline-flex;align-items:center;gap:4px;height:26px;">
+                                <i data-lucide="filter" style="width:12px;height:12px;"></i> Filtrar todo el panel en este mes
+                            </button>
+                            <button class="btn btn-ghost btn-sm" id="btnMonthlyCloseDetail" style="font-size:11.5px;color:var(--text-muted);display:inline-flex;align-items:center;gap:4px;height:26px;">
+                                <i data-lucide="x" style="width:13px;height:13px;"></i> Cerrar
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Dos Columnas Comparativas: Empresa Principal vs Subsidiaria con Tipificaciones -->
+                    <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(280px, 1fr));gap:14px;" id="monthlyDetailColumns">
+                        <!-- Columna EMPRESA PRINCIPAL -->
+                        <div style="background:var(--surface);border:1px solid rgba(0,120,212,0.25);border-radius:var(--radius);padding:14px;">
+                            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;border-bottom:1px solid var(--border-soft);padding-bottom:6px;">
+                                <div style="display:flex;align-items:center;gap:6px;">
+                                    <span style="width:10px;height:10px;border-radius:50%;background:#0078D4;"></span>
+                                    <strong style="font-size:13px;color:#0078D4;">EMPRESA PRINCIPAL</strong>
+                                </div>
+                                <span id="monthlyDetailEmpresa PrincipalTotal" style="font-size:12px;font-weight:700;color:var(--text);">0 tickets (0%)</span>
+                            </div>
+                            <div style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--text-muted);margin-bottom:6px;">
+                                Tipología / Hardware
+                            </div>
+                            <div id="monthlyDetailEmpresa PrincipalElements" style="display:flex;flex-direction:column;gap:6px;margin-bottom:12px;"></div>
+                            
+                            <div id="monthlyDetailEmpresa PrincipalTiersBlock" style="display:none;border-top:1px dashed var(--border-soft);padding-top:8px;margin-top:6px;">
+                                <div style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--text-muted);margin-bottom:6px;">
+                                    Categorización Remedy
+                                </div>
+                                <div id="monthlyDetailEmpresa PrincipalTiers" style="display:flex;flex-direction:column;gap:4px;"></div>
+                            </div>
+                        </div>
+
+                        <!-- Columna SUBSIDIARIA -->
+                        <div style="background:var(--surface);border:1px solid rgba(135,100,184,0.3);border-radius:var(--radius);padding:14px;">
+                            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;border-bottom:1px solid var(--border-soft);padding-bottom:6px;">
+                                <div style="display:flex;align-items:center;gap:6px;">
+                                    <span style="width:10px;height:10px;border-radius:50%;background:#8764B8;"></span>
+                                    <strong style="font-size:13px;color:#8764B8;">SUBSIDIARIA</strong>
+                                </div>
+                                <span id="monthlyDetailSubsidiariaTotal" style="font-size:12px;font-weight:700;color:var(--text);">0 tickets (0%)</span>
+                            </div>
+                            <div style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--text-muted);margin-bottom:6px;">
+                                Tipología / Hardware
+                            </div>
+                            <div id="monthlyDetailSubsidiariaElements" style="display:flex;flex-direction:column;gap:6px;margin-bottom:12px;"></div>
+                            
+                            <div id="monthlyDetailSubsidiariaTiersBlock" style="display:none;border-top:1px dashed var(--border-soft);padding-top:8px;margin-top:6px;">
+                                <div style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--text-muted);margin-bottom:6px;">
+                                    Categorización Remedy
+                                </div>
+                                <div id="monthlyDetailSubsidiariaTiers" style="display:flex;flex-direction:column;gap:4px;"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Fila Inferior: Otros / No determinado + Desglose de Grupos para ese Mes -->
+                    <div id="monthlyDetailFooter" style="margin-top:12px;display:flex;justify-content:space-between;align-items:center;font-size:12px;color:var(--text-muted);border-top:1px solid var(--border-soft);padding-top:8px;flex-wrap:wrap;gap:8px;">
+                        <div id="monthlyDetailOtherText">Otros / No determinado: 0 tickets</div>
+                        <div id="monthlyDetailGroupsText">Grupos del mes: —</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Fila 4: Tabla Comparativa de los 3 Grupos de Soporte -->
+            <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-md);padding:16px;box-shadow:var(--shadow-card);margin-bottom:16px;">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;border-bottom:1px solid var(--border-soft);padding-bottom:8px;">
+                    <div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.6px;color:var(--text-muted);display:flex;align-items:center;gap:6px;">
+                        <i data-lucide="table" style="width:14px;height:14px;"></i> Desglose por los 3 Grupos Asignados
+                    </div>
+                    <span style="font-size:11px;color:var(--text-faint);">Tickets en la ticketera (Mesa de Ayuda)</span>
+                </div>
+
+                <div class="table-responsive">
+                    <table class="users-table" style="font-size:12.5px;">
+                        <thead>
+                            <tr style="background:var(--surface-2);">
+                                <th>Grupo de Soporte</th>
+                                <th style="text-align:center;width:100px;">Total</th>
+                                <th style="text-align:center;width:140px;">% del Total</th>
+                                <th style="text-align:center;width:90px;">Abiertos</th>
+                                <th style="text-align:center;width:90px;">Cerrados</th>
+                                <th style="text-align:center;width:110px;">INC / WO</th>
+                                <th style="text-align:center;width:110px;">Jarvis Bot</th>
+                                <th style="text-align:center;width:130px;">Empresa Principal / Subsidiaria (Jarvis)</th>
+                            </tr>
+                        </thead>
+                        <tbody id="statsGroupsTbody"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Fila 4: Dos Columnas (Técnicos + Tipología de Hardware) -->
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px;">
+                <!-- Columna Izquierda: Carga por Técnico -->
+                <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-md);padding:16px;box-shadow:var(--shadow-card);">
+                    <div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.6px;color:var(--text-muted);display:flex;align-items:center;gap:6px;border-bottom:1px solid var(--border-soft);padding-bottom:8px;margin-bottom:12px;">
+                        <i data-lucide="users" style="width:14px;height:14px;"></i> Distribución por Técnico Asignado (Top 12)
+                    </div>
+                    <div id="statsTechList" style="max-height:360px;overflow-y:auto;padding-right:6px;"></div>
+                </div>
+
+                <!-- Columna Derecha: Tipología de Elemento y Estado -->
+                <div style="display:flex;flex-direction:column;gap:16px;">
+                    <!-- Hardware / Tipología -->
+                    <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-md);padding:16px;box-shadow:var(--shadow-card);flex:1;">
+                        <div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.6px;color:var(--text-muted);display:flex;align-items:center;gap:6px;border-bottom:1px solid var(--border-soft);padding-bottom:8px;margin-bottom:12px;">
+                            <i data-lucide="cpu" style="width:14px;height:14px;"></i> Tipo de Elemento / Hardware
+                        </div>
+                        <div id="statsElementsList" style="max-height:180px;overflow-y:auto;"></div>
+                    </div>
+
+                    <!-- Distribución por Estado -->
+                    <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-md);padding:16px;box-shadow:var(--shadow-card);flex:1;">
+                        <div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.6px;color:var(--text-muted);display:flex;align-items:center;gap:6px;border-bottom:1px solid var(--border-soft);padding-bottom:8px;margin-bottom:12px;">
+                            <i data-lucide="activity" style="width:14px;height:14px;"></i> Distribución por Estado
+                        </div>
+                        <div id="statsStatusesList"></div>
+                    </div>
+                </div>
+            </div>
+
+        </div><!-- /#statsMainContent -->
+
+    </section><!-- /#view-stats -->
+
+</div>
+</div><!-- /.content -->
+</div><!-- /.app -->
+
+<div class="drawer-overlay" id="drawerOverlay"></div>
+<aside class="drawer" id="drawer">
+    <div class="drawer-header">
+        <div class="drawer-title" style="display: flex; flex-direction: column; gap: 4px; width: 100%;">
+            <div id="drawerTicketNum" title="Hacé click para copiar el número de incidente" style="font-family: monospace; font-size: 20px; font-weight: 800; color: var(--primary); cursor: pointer; display: inline-flex; align-items: center; gap: 6px; width: fit-content; transition: opacity 0.2s;" onmouseover="this.style.opacity=0.8" onmouseout="this.style.opacity=1">—</div>
+            <h2 id="drawerName" title="Abrir chat de Teams" style="margin-bottom: 2px; cursor: pointer; font-size: 15px; font-weight: 600;">—</h2>
+            <div id="drawerBadges" style="display: flex; gap: 6px; align-items: center; flex-wrap: wrap;"></div>
+            <div class="drawer-email-row" id="drawerEmailRow" style="display: none; align-items: center; gap: 6px; margin-top: 4px;">
+                <span id="drawerEmailText" style="font-size: 12.5px;"></span>
+                <button class="drawer-email-copy" id="drawerEmailCopy" title="Copiar email" type="button" style="background: transparent; border: none; cursor: pointer; padding: 2px 4px;"><i data-lucide="copy" style="width: 13px; height: 13px;"></i></button>
+            </div>
+        </div>
+        <button class="close-btn" id="drawerClose"><i data-lucide="x"></i></button>
+    </div>
+
+    <div class="drawer-body">
+        <!-- Tabs headers -->
+        <div class="drawer-tabs" style="display: flex; border-bottom: 1px solid var(--border); margin-bottom: 14px; position: sticky; top: -16px; background: var(--surface); z-index: 10;">
+            <button type="button" class="drawer-tab active" data-target="drawer-tab-general" style="flex: 1; padding: 10px; background: transparent; border: none; border-bottom: 2px solid var(--primary); color: var(--text); font-weight: 600; cursor: pointer; text-align: center; font-size: 13px; outline: none;">General</button>
+            <button type="button" class="drawer-tab" data-target="drawer-tab-comments" style="flex: 1; padding: 10px; background: transparent; border: none; border-bottom: 2px solid transparent; color: var(--text-muted); font-weight: 600; cursor: pointer; text-align: center; font-size: 13px; display: flex; align-items: center; justify-content: center; gap: 6px; outline: none;">
+                <i data-lucide="message-square" style="width: 14px; height: 14px;"></i> Comentarios y Adjuntos
+            </button>
+        </div>
+
+        <div id="drawer-tab-general" class="drawer-tab-content">
+            <!-- ── Descripción / Notas ── -->
+            <div class="notes-block">
+                <div class="section-title" style="margin-top: 14px; margin-bottom: 6px;"><i data-lucide="file-text"></i> Descripción del Ticket</div>
+                <textarea id="fldNotes" class="notes-compact" placeholder="Sin descripción detallada" readonly style="background: var(--surface-2); cursor: text; resize: vertical; min-height: 80px; max-height: 200px; outline: none;"></textarea>
+            </div>
+            
+            <!-- ── Acciones Rápidas ── -->
+            <div id="quickActionsBlock">
+                <div class="section-title" style="margin-top: 14px;"><i data-lucide="zap"></i> Acciones rápidas</div>
+                <div class="quick-actions" id="quickActionsContainer">
+                    <!-- populated by renderQuickActionsInDrawer() -->
+                </div>
+            </div>
+
+            <!-- ── Bloque info: Fecha retiro + Datos periférico (si aplica) ── -->
+            <div class="drawer-info-card" id="drawerInfoCard">
+                <div class="drawer-info-row">
+                    <div class="case-meta-field" style="flex: 1;">
+                        <label for="fldFechaRetiro"><i data-lucide="calendar"></i> Fecha de retiro</label>
+                        <input type="datetime-local" id="fldFechaRetiro">
+                    </div>
+                    <button type="button" id="btnPriorityToggle" class="priority-toggle" title="Marcar como urgente" aria-pressed="false" style="align-self: flex-end; flex-shrink: 0;">
+                        <i data-lucide="alert-triangle"></i>
+                        <span>Urgente</span>
+                    </button>
+                </div>
+
+            </div>
+        </div>
+
+        <div id="drawer-tab-comments" class="drawer-tab-content" style="display: none;">
+             <div id="remedyCommentsLoading" style="text-align: center; padding: 20px; color: var(--text-muted);">
+                 <i data-lucide="loader-2" class="spin" style="width: 20px; height: 20px; display: inline-block;"></i>
+                 <div style="margin-top: 8px; font-size: 12.5px;">Cargando comentarios desde Remedy...</div>
+             </div>
+             <div id="remedyCommentsContainer" style="display: flex; flex-direction: column; gap: 12px; max-height: calc(100vh - 360px); overflow-y: auto; padding-right: 4px; margin-bottom: 16px;">
+                 <!-- populated by JS -->
+             </div>
+             
+             <!-- Sección de Adjuntos locales -->
+             <div class="section-title" style="margin-top: 18px; margin-bottom: 8px; font-size: 13px; font-weight: 700; color: var(--text); border-top: 1px solid var(--border); padding-top: 14px; display: flex; align-items: center; justify-content: space-between;">
+                 <span style="display: inline-flex; align-items: center; gap: 6px;">
+                     <i data-lucide="paperclip" style="width: 14px; height: 14px;"></i> Adjuntos del Caso
+                 </span>
+                 <label id="btnUploadAttachment" for="attachUploadInput" class="btn btn-ghost btn-sm" style="cursor: pointer; margin: 0; display: inline-flex; align-items: center; gap: 4px;" title="Subir archivo">
+                     <i data-lucide="upload" style="width: 14px; height: 14px;"></i> Subir
+                 </label>
+             </div>
+             <div id="attachmentsList" class="attachments-list" style="display: flex; flex-direction: column; gap: 8px;">
+                 <div class="attachments-empty" id="attachmentsEmpty" style="color: var(--text-muted); font-size: 12.5px; padding: 8px 0;">Sin adjuntos.</div>
+             </div>
+        </div>
+
+        <!-- tipificación oculta (usada por JS) -->
+        <select id="fldTipificacion" style="display:none;">
+            <option value="">— Sin tipificación —</option>
+            <optgroup label="Incidentes INC">
+                <option value="Software - Instalacion">Software - Instalación</option>
+                <option value="Software - Configuracion">Software - Configuración</option>
+                <option value="Software - Inconveniente / Mensaje de Error">Software - Inconveniente / Error</option>
+                <option value="Outlook - Inconvenientes con Correo">Outlook - Correo</option>
+                <option value="Equipo - Configuracion de VPN">Equipo - Configuración VPN</option>
+                <option value="Kit Inalambrico">Kit Inalámbrico</option>
+                <option value="Vincha">Vincha</option>
+                <option value="Cargador">Cargador</option>
+                <option value="Maquina Virtual">Máquina Virtual</option>
+                <option value="Correo Configuracion">Correo Configuración</option>
+                <option value="Equipo - Reparacion">Equipo - Reparación</option>
+                <option value="Red - Sin Acceso">Red - Sin Acceso</option>
+                <option value="PC Virtual No Funciona">PC Virtual No Funciona</option>
+                <option value="Inconveniente Periferico">Inconveniente Periférico</option>
+                <option value="Adaptador/Cable">Adaptador/Cable</option>
+                <option value="Chat Corporativo">Chat Corporativo</option>
+                <option value="Conexion Oficina Virtual">Conexión Oficina Virtual</option>
+                <option value="Configuracion Red WIFI">Configuración Red WIFI</option>
+                <option value="Expuesto de seguridad">Expuesto de Seguridad</option>
+                <option value="Externos Maquina Virtual">Externos Máquina Virtual</option>
+                <option value="Impresora Configuracion">Impresora Configuración</option>
+                <option value="Sin Acceso /Error">Sin Acceso / Error</option>
+            </optgroup>
+            <optgroup label="Órdenes de Trabajo WO">
+                <option value="Externos Instalacion Imagen Empresa Principal">Externos Instalación Imagen Empresa Principal</option>
+                <option value="Equipo Nuevo o Actualizacion">Equipo Nuevo o Actualización</option>
+                <option value="Notebook Baja">Notebook Baja</option>
+                <option value="Alta/cambio Equipo Celular">Alta/Cambio Equipo Celular</option>
+                <option value="Solicitud de Monitor">Solicitud de Monitor</option>
+                <option value="Ampliar Memoria RAM">Ampliar Memoria RAM</option>
+            </optgroup>
+        </select>
+
+        <!-- input oculto para upload (mantenido por attachments.js) -->
+        <input type="file" id="attachUploadInput" style="display:none;">
+
+        <div id="remedyCloseHost"></div>
+    </div>
+
+    <div class="drawer-footer">
+        <button class="btn btn-danger" id="btnDelete" style="display: none;"><i data-lucide="trash-2"></i> Eliminar</button>
+        <button class="btn btn-ghost" id="btnTransferTicket" title="Transferir ticket a otro técnico" style="display: none; align-items: center; gap: 6px;">
+            <i data-lucide="arrow-right-left" style="width:14px;height:14px;"></i>
+            <span>Transferir</span>
+        </button>
+        <button class="btn btn-secondary" id="btnOpenPlanilla" style="display: inline-flex; align-items: center; gap: 6px;">
+            <i data-lucide="file-text" style="width:14px;height:14px;"></i>
+            <span>Generar Template</span>
+        </button>
+        <button class="btn btn-primary" id="btnSave"><i data-lucide="save"></i> Guardar</button>
+    </div>
+</aside>
+
+
+
+
+<div class="modal-overlay" id="modalOverlay">
+    <div class="modal">
+        <div class="modal-header">
+            <h3 id="modalTitle">Mensaje</h3>
+            <button class="close-btn" id="modalClose"><i data-lucide="x"></i></button>
+        </div>
+        <div class="modal-body">
+            <textarea id="modalText" readonly></textarea>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-ghost" id="modalCloseBtn">Cerrar</button>
+            <button class="btn btn-primary" id="modalCopy">Copiar al portapapeles</button>
+        </div>
+    </div>
+</div>
+
+<div class="planilla-panel" id="planillaModal">
+    <div class="modal-header">
+        <h3>Planilla de Envío de Template</h3>
+        <button class="close-btn" id="planillaClose"><i data-lucide="x"></i></button>
+    </div>
+    <div class="modal-body planilla-split">
+        <!-- Pane izquierdo: editor (form + wizard). Scrolleable independiente. -->
+        <div class="planilla-editor-pane">
+            <form id="planillaForm" onsubmit="return false;">
+                <!-- Contexto global del template -->
+                <div class="planilla-section">
+                    <div class="field-grid" style="grid-template-columns: 140px 140px 1fr;">
+                        <div class="field">
+                            <label>Acción</label>
+                            <select id="planAction"></select>
+                        </div>
+                        <div class="field" style="display: none;">
+                            <label>Razón</label>
+                            <select id="planReason"></select>
+                        </div>
+                        <div class="field">
+                            <label>Logística</label>
+                            <select id="planLogistics">
+                                <option value="presencial">Presencial</option>
+                                <option value="correo_interno">Correo interno</option>
+                            </select>
+                        </div>
+                        <div class="field">
+                            <label>Ticket principal</label>
+                            <input type="text" id="planTicket" placeholder="WO / INC / REQ" list="dlTicket">
+                            <small class="field-error" data-field-error="planTicket"></small>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Personas (global) -->
+                <div class="planilla-section">
+                    <div class="field-grid">
+                        <div class="field">
+                            <label>Empresa propietaria</label>
+                            <input type="text" id="planEmpresa" list="dlEmpresa">
+                            <button type="button" id="btnAgregarConsultora" style="display: none; padding: 4px 8px; font-size: 11px; margin-top: 4px; border: 1px dashed var(--primary, #0078d4); color: var(--primary, #0078d4); background: transparent; border-radius: 4px; cursor: pointer; width: fit-content; font-family: inherit;">+ Agregar Consultora</button>
+                        </div>
+                        <div class="field">
+                            <label>Persona que entrega</label>
+                            <input type="text" id="planTecnico" readonly>
+                        </div>
+                        <div class="field">
+                            <label>Persona que retira</label>
+                            <input type="text" id="planPersonaRetira">
+                            <small class="field-error" data-field-error="planPersonaRetira"></small>
+                        </div>
+                        <div class="field">
+                            <label>Email que retira</label>
+                            <input type="email" id="planEmailRetira" style="width: 100%;">
+                        </div>
+                        <div class="field-warning" id="planExternalWarning" style="display: none;">
+                            <i data-lucide="alert-circle"></i>
+                            <span>Usuario externo a la empresa — confirmá manualmente la empresa propietaria del equipo.</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Saludo del email -->
+                <div class="planilla-section" style="padding-top: 0; padding-bottom: 0;">
+                    <div id="planSaludoCompact" style="display: flex; align-items: center; justify-content: space-between; font-size: 12.5px; background: var(--surface-2); padding: 8px 12px; border: 1px solid var(--border); border-radius: var(--radius);">
+                        <span style="display: inline-flex; align-items: center; gap: 6px; font-weight: 600; flex-grow: 1;">
+                            <i data-lucide="mail" style="width: 15px; height: 15px; color: var(--primary); flex-shrink: 0;"></i> Saludo:
+                            <select id="planSaludoSelect" style="padding: 2px 6px; font-size: 11.5px; height: auto; min-height: 24px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); color: var(--text); max-width: 220px; flex-grow: 1;"></select>
+                        </span>
+                        <button type="button" class="btn btn-ghost btn-xs" id="planBtnEditSaludo" style="padding: 2px 8px; font-size: 11px; height: auto; min-height: 22px; margin-left: 10px; flex-shrink: 0;">Personalizar saludo</button>
+                    </div>
+                    <div id="planSaludoEditorWrap" style="display: none; flex-direction: column; gap: 8px; margin-top: 8px;">
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <label style="font-size: 11px; font-weight: 700; text-transform: uppercase; color: var(--text-muted);">Editar saludo personalizado</label>
+                            <div style="display: flex; gap: 6px;">
+                                <button type="button" class="btn btn-ghost btn-xs" id="planSaludoFill" style="padding: 2px 6px; font-size: 10.5px; height: auto; min-height: 22px;">Cargar default</button>
+                                <button type="button" class="btn btn-ghost btn-xs" id="planSaludoReset" style="padding: 2px 6px; font-size: 10.5px; height: auto; min-height: 22px;">Resetear</button>
+                            </div>
+                        </div>
+                        <textarea id="planSaludo" rows="3" style="width: 100%; font-size: 12px; resize: vertical; border: 1px solid var(--border); border-radius: var(--radius); padding: 8px; background: var(--surface); color: var(--text); font-family: inherit;" placeholder="Vacío = saludo automático. Si escribís, podés usar tokens entre llaves: {saludo}, {fecha}, {elemento}, {persona}."></textarea>
+                    </div>
+                </div>
+
+                <!-- Items list vertical container -->
+                <div class="planilla-section">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                        <h4 style="margin: 0; font-size: 13px; font-weight: 600; display: inline-flex; align-items: center; gap: 6px;">
+                            <i data-lucide="package" style="width: 14px; height: 14px;"></i> Ítems del Template
+                        </h4>
+                        <button type="button" class="btn btn-ghost btn-sm" id="planAddItem" style="padding: 3px 8px; font-size: 11px; height: auto; min-height: 26px; display: inline-flex; align-items: center; gap: 4px;">
+                            <i data-lucide="plus" style="width: 12px; height: 12px;"></i> Agregar ítem
+                        </button>
+                    </div>
+                    <div id="planItemsContainer" style="display: flex; flex-direction: column; gap: 12px; padding-right: 4px;">
+                        <!-- Cards renderizadas dinámicamente -->
+                    </div>
+                    <small class="field-error" data-field-error="planItemsList"></small>
+                </div>
+
+                <!-- Datalists para autocomplete (poblados al abrir) -->
+                <datalist id="dlMarca"></datalist>
+                <datalist id="dlModelo"></datalist>
+                <datalist id="dlEmpresa"></datalist>
+                <datalist id="dlTicket"></datalist>
+            </form>
+        </div>
+
+        <!-- Pane derecho: vista previa del email siempre visible. -->
+        <aside class="planilla-preview-pane">
+            <div class="planilla-preview-header">
+                <i data-lucide="eye"></i>
+                <span>Vista previa del email</span>
+            </div>
+            <div class="planilla-preview-content">
+                <div class="planilla-preview-subject"><strong>Asunto:</strong> <span id="planPreviewSubject">—</span></div>
+                <div class="planilla-preview-body" id="planPreviewBody"></div>
+            </div>
+        </aside>
+    </div>
+    <div class="modal-footer">
+        <button class="btn btn-ghost" id="planillaClear" title="Vaciar items para empezar de cero (datos del caso no se tocan)">Limpiar</button>
+        <button class="btn btn-ghost" id="planillaCancel">Cancelar</button>
+        <button class="btn btn-primary" id="planillaSubmit"><i data-lucide="mail"></i> Enviar por Outlook</button>
+    </div>
+</div>
+
+
+
+<!-- Modal moderno de login de Remedy -->
+<div class="modal-overlay" id="remedyLoginModal">
+    <div class="modal remedy-login-modal" style="max-width: 420px;">
+        <div class="modal-header" style="background: linear-gradient(135deg, #0F4C81, #0078D4); border-bottom: none; border-radius: 4px 4px 0 0;">
+            <div style="display: flex; align-items: center; gap: 10px;">
+                <div style="width: 32px; height: 32px; background: rgba(255,255,255,0.15); border-radius: 8px; display: grid; place-items: center;">
+                    <i data-lucide="shield-check" style="width: 18px; height: 18px; color: #fff;"></i>
+                </div>
+                <div>
+                    <h3 style="color: #fff; font-size: 15px; font-weight: 700; margin-bottom: 1px;">Remedy — BMC Webcenter</h3>
+                    <p style="color: rgba(255,255,255,0.75); font-size: 11px; margin: 0;">Autenticación corporativa segura</p>
+                </div>
+            </div>
+            <button class="close-btn" id="remedyLoginClose" style="color: rgba(255,255,255,0.8);"><i data-lucide="x"></i></button>
+        </div>
+        <div class="modal-body" style="padding: 24px 28px 20px;">
+            <div style="background: var(--surface-2); border: 1px solid var(--border); border-radius: var(--radius); padding: 8px 12px; margin-bottom: 16px; font-size: 11.5px; color: var(--text-muted); line-height: 1.4;">
+                ⚡ <strong>Modo Demostración Activo:</strong> Podés conectar con cualquier usuario o las credenciales por defecto. La conexión e interacción con tickets se simulará en tiempo real.
+            </div>
+            <div class="field" style="margin-bottom: 16px;">
+                <label style="font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted);">Usuario de Remedy</label>
+                <div style="position: relative; margin-top: 4px;">
+                    <i data-lucide="user" style="position: absolute; left: 10px; top: 50%; transform: translateY(-50%); width: 15px; height: 15px; color: var(--text-faint);"></i>
+                    <input type="text" id="remedyLoginUser"
+                        placeholder="ej: OPERADOR"
+                        autocomplete="off" autocapitalize="characters" spellcheck="false"
+                        style="width: 100%; padding: 10px 12px 10px 34px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface); color: var(--text); font-family: inherit; font-size: 14px; text-transform: uppercase; letter-spacing: 0.03em;">
+                </div>
+                <span style="font-size: 11px; color: var(--text-faint); margin-top: 4px; display: block;">El usuario se enviará en mayúsculas automáticamente</span>
+            </div>
+            <div class="field" style="margin-bottom: 24px;">
+                <label style="font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted);">Contraseña</label>
+                <div style="position: relative; margin-top: 4px;">
+                    <i data-lucide="lock" style="position: absolute; left: 10px; top: 50%; transform: translateY(-50%); width: 15px; height: 15px; color: var(--text-faint);"></i>
+                    <input type="password" id="remedyLoginPass"
+                        placeholder="••••••••"
+                        style="width: 100%; padding: 10px 12px 10px 34px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface); color: var(--text); font-family: inherit; font-size: 14px;">
+                </div>
+            </div>
+            <div id="remedyLoginError" style="display:none; padding: 10px 12px; background: rgba(164,38,44,0.08); border: 1px solid rgba(164,38,44,0.3); border-radius: var(--radius); color: var(--danger); font-size: 13px; margin-bottom: 16px;"></div>
+        </div>
+        <div class="modal-footer" style="justify-content: space-between;">
+            <button class="btn btn-ghost" id="remedyLoginCancel">Cancelar</button>
+            <button class="btn btn-primary" id="remedyLoginSubmit" style="min-width: 120px;">
+                <i data-lucide="log-in" style="width: 15px; height: 15px;"></i>
+                <span id="remedyLoginSubmitLabel">Conectar</span>
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Modal de edición de perfil de usuario -->
+<div class="modal-overlay" id="profileEditModal">
+    <div class="modal" style="max-width: 460px;">
+        <div class="modal-header">
+            <div style="display: flex; align-items: center; gap: 10px;">
+                <i data-lucide="user-pen" style="color: var(--primary);"></i>
+                <h3>Editar perfil</h3>
+            </div>
+            <button class="close-btn" id="profileEditClose"><i data-lucide="x"></i></button>
+        </div>
+        <div class="modal-body">
+            <div class="field-grid">
+                <div class="field field-full">
+                    <label>Nombre completo</label>
+                    <input type="text" id="profileEditName" placeholder="Ej: Juan Pérez" autocomplete="off">
+                </div>
+                <div class="field field-full">
+                    <label>Correo electrónico</label>
+                    <input type="email" id="profileEditEmail" placeholder="Ej: jperez@texpert.com.ar" autocomplete="off">
+                </div>
+                <div class="field field-full">
+                    <label>Empresa / Organización</label>
+                    <input type="text" id="profileEditOrg" placeholder="Ej: Solverbat / Empresa Principal" autocomplete="off">
+                </div>
+            </div>
+            <details style="margin-top: 16px; border: 1px solid var(--border); border-radius: var(--radius);">
+                <summary style="padding: 10px 14px; cursor: pointer; font-size: 13px; font-weight: 600; color: var(--text-muted); list-style: none; display: flex; align-items: center; gap: 6px;">
+                    <i data-lucide="key" style="width: 14px; height: 14px;"></i> Cambiar contraseña
+                </summary>
+                <div style="padding: 16px 14px; border-top: 1px solid var(--border);">
+                    <div class="field-grid">
+                        <div class="field field-full">
+                            <label>Contraseña actual</label>
+                            <input type="password" id="profileCurrentPw" placeholder="••••••••" autocomplete="current-password">
+                        </div>
+                        <div class="field">
+                            <label>Nueva contraseña</label>
+                            <input type="password" id="profileNewPw" placeholder="••••••••" autocomplete="new-password">
+                        </div>
+                        <div class="field">
+                            <label>Confirmar nueva</label>
+                            <input type="password" id="profileConfirmPw" placeholder="••••••••" autocomplete="new-password">
+                        </div>
+                    </div>
+                </div>
+            </details>
+
+            <div id="profileEditError" style="display:none; margin-top: 12px; padding: 10px 12px; background: rgba(164,38,44,0.08); border: 1px solid rgba(164,38,44,0.3); border-radius: var(--radius); color: var(--danger); font-size: 13px;"></div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-ghost" id="profileEditCancel">Cancelar</button>
+            <button class="btn btn-primary" id="profileEditSave">
+                <i data-lucide="save" style="width: 15px; height: 15px;"></i>
+                <span id="profileEditSaveLabel">Guardar cambios</span>
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Modal de Preferencias del usuario -->
+<!-- Modal de Preferencias del usuario -->
+<div class="modal-overlay" id="preferencesModal">
+    <div class="modal" style="max-width: 950px; width: 90%; height: 600px; max-height: 85vh;">
+        <div class="modal-header">
+            <div style="display: flex; align-items: center; gap: 10px;">
+                <i data-lucide="sliders" style="color: var(--primary);"></i>
+                <h3>Preferencias de Template</h3>
+            </div>
+            <button class="close-btn" id="preferencesClose"><i data-lucide="x"></i></button>
+        </div>
+        <div class="modal-body" style="padding: 0; overflow: hidden; display: flex; flex: 1; min-height: 0;">
+            <!-- Left Sidebar for Action categories -->
+            <div class="quick-msgs-sidebar" style="width: 250px; border-right: 1px solid var(--border); display: flex; flex-direction: column; background: var(--surface-2); height: 100%;">
+                <div style="padding: 12px; border-bottom: 1px solid var(--border); font-size: 11px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px;">
+                    Categorías de Template
+                </div>
+                <div id="preferencesTabsList" style="flex: 1; overflow-y: auto; display: flex; flex-direction: column;">
+                    <!-- Renders dynamically with badges in JS -->
+                </div>
+            </div>
+            <!-- Right Panel for templates of active category -->
+            <div class="quick-msgs-content" style="flex: 1; display: flex; flex-direction: column; background: var(--surface); height: 100%;">
+                <div style="padding: 16px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap;">
+                    <div style="flex: 1; min-width: 200px;">
+                        <h4 id="prefActiveTabTitle" style="font-size: 14px; font-weight: 600; color: var(--text); margin: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 350px;">Asignación</h4>
+                        <!-- Sub-tabs for Saludos / Observaciones -->
+                        <div style="display: flex; gap: 4px; margin-top: 8px; background: var(--surface-2); padding: 3px; border-radius: var(--radius); border: 1px solid var(--border); width: fit-content;">
+                            <button class="pref-subtab active" data-subtab="greetings" type="button">Saludos</button>
+                            <button class="pref-subtab" data-subtab="obs" type="button">Observaciones</button>
+                        </div>
+                    </div>
+                    <div style="display: flex; gap: 6px; align-items: center;">
+                        <button class="btn btn-ghost" id="prefRestoreBtn" type="button" style="padding: 6px 10px; border: 1px solid var(--border); font-size: 12px; height: auto;" title="Restablecer valores de fábrica">
+                            <i data-lucide="rotate-ccw" style="width: 13px; height: 13px; margin-right: 4px;"></i> Restablecer
+                        </button>
+                        <button class="btn btn-primary" id="prefAddBtn" type="button" style="padding: 6px 12px; font-size: 12px; height: auto; display: flex; align-items: center; gap: 4px;">
+                            <i data-lucide="plus" style="width: 14px; height: 14px;"></i> Nuevo mensaje
+                        </button>
+                    </div>
+                </div>
+
+                <div id="prefInfoBar" style="padding: 10px 16px; background: var(--surface-2); border-bottom: 1px solid var(--border); font-size: 12px; color: var(--text-muted); line-height: 1.45;">
+                    <!-- Renders dynamically with token info in JS -->
+                </div>
+
+                <div id="prefContentList" style="padding: 16px; overflow-y: auto; flex: 1; display: flex; flex-direction: column; gap: 12px;">
+                    <!-- Rendered by JS -->
+                </div>
+            </div>
+        </div>
+        <div class="modal-footer" style="margin-top: 0;">
+            <div id="preferencesError" style="display:none; margin-right: auto; padding: 6px 12px; background: rgba(164,38,44,0.08); border: 1px solid rgba(164,38,44,0.3); border-radius: var(--radius); color: var(--danger); font-size: 12px;"></div>
+            <button class="btn btn-ghost" id="preferencesCancel">Cancelar</button>
+            <button class="btn btn-primary" id="preferencesSave">
+                <i data-lucide="save" style="width: 15px; height: 15px;"></i> Guardar
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Modal de nota de resolución para tickets de Remedy -->
+<div class="modal-overlay" id="resolveRemedyModal">
+    <div class="modal" style="max-width: 480px;">
+        <div class="modal-header">
+            <div style="display: flex; align-items: center; gap: 10px;">
+                <i data-lucide="check-circle-2" style="color: var(--success);"></i>
+                <h3>Resolver ticket en Remedy</h3>
+            </div>
+            <button class="close-btn" id="resolveRemedyClose"><i data-lucide="x"></i></button>
+        </div>
+        <div class="modal-body">
+            <p style="color: var(--text-muted); font-size: 13px; margin-bottom: 16px;">Ingresá la nota de resolución que quedará registrada en el ticket. Este campo es obligatorio.</p>
+            <div class="field">
+                <label>Ticket</label>
+                <div id="resolveRemedyTicketId" style="padding: 6px 10px; background: var(--surface-2); border: 1px solid var(--border); border-radius: var(--radius); font-family: monospace; font-weight: 700; color: var(--primary); font-size: 14px;">—</div>
+            </div>
+            <div class="field" style="margin-top: 12px;">
+                <label>Nota de resolución <span style="color: var(--danger);">*</span></label>
+                <textarea id="resolveRemedyNote" style="width: 100%; height: 80px; min-height: 80px; resize: vertical; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 10px 12px; font-family: inherit; font-size: 14px; color: var(--text); margin-top: 4px;" placeholder="Describe qué acción se realizó para resolver el ticket..."></textarea>
+            </div>
+            <div class="field" style="margin-top: 12px;">
+                <label>Adjuntar archivo <span style="color: var(--text-muted); font-size: 11px; font-weight: normal;">(Opcional, .pdf, .jpg, .jpeg, .png)</span></label>
+                <input type="file" id="resolveRemedyFile" accept=".pdf,.jpg,.jpeg,.png" style="width: 100%; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 6px 10px; font-family: inherit; font-size: 13px; color: var(--text); margin-top: 4px; cursor: pointer;" />
+            </div>
+            <div id="resolveRemedyError" style="display:none; margin-top: 10px; padding: 8px 12px; background: rgba(164,38,44,0.08); border: 1px solid rgba(164,38,44,0.3); border-radius: var(--radius); color: var(--danger); font-size: 13px;"></div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-ghost" id="resolveRemedyCancel">Cancelar</button>
+            <button class="btn btn-primary" id="resolveRemedyConfirm" style="background: var(--success); border-color: var(--success);">
+                <i data-lucide="check" style="width: 15px; height: 15px;"></i>
+                <span id="resolveRemedyConfirmLabel">Confirmar resolución</span>
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Modal de nota de resolución masiva -->
+<div class="modal-overlay" id="bulkResolveModal">
+    <div class="modal" style="max-width: 480px;">
+        <div class="modal-header">
+            <div style="display: flex; align-items: center; gap: 10px;">
+                <i data-lucide="check-circle-2" style="color: var(--success);"></i>
+                <h3>Cierre masivo de tickets en Remedy</h3>
+            </div>
+            <button class="close-btn" id="bulkResolveClose"><i data-lucide="x"></i></button>
+        </div>
+        <div class="modal-body">
+            <p style="color: var(--text-muted); font-size: 13px; margin-bottom: 16px;">
+                Ingresá la nota de resolución común para todos los tickets seleccionados. Se registrará la misma acción en Remedy para todos ellos.
+            </p>
+            <div class="field">
+                <label>Tickets a cerrar</label>
+                <div id="bulkResolveTicketList" style="padding: 8px 12px; background: var(--surface-2); border: 1px solid var(--border); border-radius: var(--radius); max-height: 100px; overflow-y: auto; font-family: monospace; font-size: 12px; font-weight: 700; color: var(--primary); line-height: 1.5; word-break: break-all;">
+                    —
+                </div>
+            </div>
+            <div class="field" style="margin-top: 12px;">
+                <label>Nota de resolución <span style="color: var(--danger);">*</span></label>
+                <textarea id="bulkResolveNote" style="width: 100%; height: 80px; min-height: 80px; resize: vertical; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 10px 12px; font-family: inherit; font-size: 14px; color: var(--text); margin-top: 4px;" placeholder="Describe qué acción se realizó para resolver los tickets..."></textarea>
+            </div>
+            <div class="field" style="margin-top: 12px;">
+                <label>Adjuntar archivo <span style="color: var(--text-muted); font-size: 11px; font-weight: normal;">(Opcional, .pdf, .jpg, .jpeg, .png - se aplicará a todos los tickets)</span></label>
+                <input type="file" id="bulkResolveFile" accept=".pdf,.jpg,.jpeg,.png" style="width: 100%; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 6px 10px; font-family: inherit; font-size: 13px; color: var(--text); margin-top: 4px; cursor: pointer;" />
+            </div>
+            <div id="bulkResolveError" style="display:none; margin-top: 10px; padding: 8px 12px; background: rgba(164,38,44,0.08); border: 1px solid rgba(164,38,44,0.3); border-radius: var(--radius); color: var(--danger); font-size: 13px;"></div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-ghost" id="bulkResolveCancel">Cancelar</button>
+            <button class="btn btn-primary" id="bulkResolveConfirm" style="background: var(--success); border-color: var(--success);">
+                <i data-lucide="check" style="width: 15px; height: 15px;"></i>
+                <span id="bulkResolveConfirmLabel">Confirmar cierre masivo</span>
+            </button>
+        </div>
+    </div>
+</div>
+
+
+
+<!-- Modal para crear nuevo caso en Remedy -->
+<div class="modal-overlay" id="createRemedyTicketModal">
+    <div class="modal" style="max-width: 580px; width: 90%;">
+        <div class="modal-header">
+            <div style="display: flex; align-items: center; gap: 10px;">
+                <i data-lucide="plus-circle" style="color: var(--primary);"></i>
+                <h3>Crear nuevo caso en Remedy</h3>
+            </div>
+            <button class="close-btn" id="createRemedyTicketClose"><i data-lucide="x"></i></button>
+        </div>
+        <div class="modal-body" style="max-height: 440px; overflow-y: auto; padding-right: 4px;">
+            <p style="color: var(--text-muted); font-size: 12.5px; margin-bottom: 16px;">
+                Seleccioná la tipificación del caso excepcional para registrarlo en Remedy.
+            </p>
+
+            <div class="field" style="margin-top: 12px;">
+                <label>Tipificación de Solicitud <span style="color: var(--danger);">*</span></label>
+                <select id="createRemedyType" style="width: 100%; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 8px 10px; font-family: inherit; font-size: 13.5px; color: var(--text); font-weight: 600; margin-top: 4px; cursor: pointer;">
+                    <option value="" disabled selected>-- Seleccione una tipificación --</option>
+                </select>
+            </div>
+
+            <!-- Separador dinámico -->
+            <div id="remedyDynamicFieldsHeader" style="display: none; margin-top: 20px; border-top: 1px solid var(--border); padding-top: 16px; margin-bottom: 12px;">
+                <h4 style="font-size: 13px; text-transform: uppercase; color: var(--primary); font-weight: 700; letter-spacing: 0.5px;">Detalles específicos de la Solicitud</h4>
+            </div>
+
+            <!-- Campos dinámicos renderizados por JS -->
+            <div id="remedyDynamicFields" style="display: flex; flex-direction: column; gap: 12px;"></div>
+
+            <div id="createRemedyError" style="display:none; margin-top: 16px; padding: 10px 14px; background: rgba(164,38,44,0.08); border: 1px solid rgba(164,38,44,0.3); border-radius: var(--radius); color: var(--danger); font-size: 13px; font-weight: 500;"></div>
+        </div>
+        <div class="modal-footer" style="border-top: 1px solid var(--border); padding-top: 12px;">
+            <button class="btn btn-ghost" id="createRemedyTicketCancel">Cancelar</button>
+            <button class="btn btn-primary" id="createRemedyTicketConfirm">
+                <i data-lucide="send" style="width: 15px; height: 15px;"></i>
+                <span id="createRemedyTicketConfirmLabel">Crear Ticket</span>
+            </button>
+        </div>
+    </div>
+</div>
+
+<div class="login-screen" id="loginScreen" style="display: none;">
+
+    <div class="login-card">
+        <h2>OrgWo</h2>
+        <p>Open Work Orders & Workspace Orchestrator</p>
+        
+        <div style="background: var(--surface-2); border: 1px solid var(--border); border-radius: var(--radius); padding: 10px 12px; margin-top: 14px; font-size: 11.5px; color: var(--text-muted); text-align: left; line-height: 1.5;">
+            <div style="font-weight: 700; color: var(--text); margin-bottom: 4px; display: flex; align-items: center; gap: 4px;">
+                <i data-lucide="key" style="width: 13px; height: 13px;"></i> Credenciales Demo Preconfiguradas:
+            </div>
+            • <strong>Dispatcher (Admin):</strong> <code>admin</code> / <code>admin123</code><br>
+            • <strong>Técnico Nivel 1:</strong> <code>tecnico1</code> / <code>tecnico123</code><br>
+            • <strong>Técnica Nivel 2:</strong> <code>tecnico2</code> / <code>tecnico123</code>
+        </div>
+        
+        <form id="loginForm" onsubmit="return false;" style="display: flex; flex-direction: column; gap: 16px; margin-top: 16px;">
+            <div class="login-field">
+                <label>Nombre de Usuario</label>
+                <input type="text" id="loginUsername" placeholder="Ej: admin o tecnico1" required>
+            </div>
+            
+            <div class="login-field">
+                <label>Contraseña</label>
+                <input type="password" id="loginPassword" placeholder="••••••••" required>
+            </div>
+            
+            <button class="login-btn" id="loginSubmitBtn">Ingresar</button>
+        </form>
+    </div>
+</div>
+
+
+
+
+
+<!-- Modal de Transferencia de Ticket -->
+<div class="modal-overlay" id="transferModal">
+    <div class="modal" style="max-width: 420px;">
+        <div class="modal-header">
+            <div style="display: flex; align-items: center; gap: 10px;">
+                <i data-lucide="arrow-right-left" style="color: var(--primary);"></i>
+                <h3>Transferir ticket</h3>
+            </div>
+            <button class="close-btn" id="transferModalClose"><i data-lucide="x"></i></button>
+        </div>
+        <div class="modal-body">
+            <p style="color: var(--text-muted); font-size: 13px; margin-bottom: 16px;">
+                Seleccioná el técnico al que querés transferir este ticket.
+                El técnico recibirá el caso en su tablero.
+            </p>
+            <div id="transferTicketInfo" style="padding: 8px 12px; background: var(--surface-2); border: 1px solid var(--border); border-radius: var(--radius); font-family: monospace; font-weight: 700; color: var(--primary); font-size: 14px; margin-bottom: 16px;">—</div>
+            <div class="field">
+                <label>Técnico destino <span style="color: var(--danger);">*</span></label>
+                <select id="transferTargetSelect" style="width: 100%; padding: 8px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); color: var(--text);">
+                    <option value="">— Seleccioná un técnico —</option>
+                </select>
+            </div>
+            <div class="field" style="margin-top: 12px; display: none;">
+                <label>Nota de transferencia <span style="font-weight: normal; font-size: 11px; color: var(--text-muted);">(opcional)</span></label>
+                <textarea id="transferNote" style="width: 100%; padding: 8px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); color: var(--text); resize: vertical; min-height: 60px;" placeholder="Ej: El usuario prefiere atención de tarde..."></textarea>
+            </div>
+            <div id="transferError" style="display:none; color: var(--danger); font-size: 12px; margin-top: 12px; padding: 8px; background: rgba(220, 53, 69, 0.1); border-radius: 4px;"></div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-ghost" id="transferModalCancel">Cancelar</button>
+            <button class="btn btn-primary" id="transferModalConfirm" style="display: flex; align-items: center; gap: 6px;">
+                <i data-lucide="send" style="width: 15px; height: 15px;"></i>
+                <span id="transferModalConfirmLabel">Transferir</span>
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Modal de Mensajes Rápidos -->
+<div class="modal-overlay" id="quickMsgsModal">
+    <div class="modal" style="max-width: 950px; width: 90%; height: 600px; max-height: 85vh;">
+        <div class="modal-header">
+            <div style="display: flex; align-items: center; gap: 10px;">
+                <i data-lucide="zap" style="color: var(--primary);"></i>
+                <h3>Mensajes rápidos personalizados</h3>
+                <div style="position: relative; display: inline-flex; align-items: center; cursor: pointer; color: var(--text-faint);" title="Ver variables disponibles">
+                    <i data-lucide="help-circle" style="width: 15px; height: 15px; transition: color 0.15s;" onmouseover="this.style.color='var(--primary)'" onmouseout="this.style.color='var(--text-faint)'" onclick="showQuickMsgsVariablesHelp()"></i>
+                </div>
+            </div>
+            <button class="close-btn" id="quickMsgsModalClose"><i data-lucide="x"></i></button>
+        </div>
+        <div class="modal-body" style="padding: 0; overflow: hidden; display: flex; flex: 1; min-height: 0;">
+            <!-- Left Sidebar for Typification Tabs -->
+            <div class="quick-msgs-sidebar" style="width: 300px; border-right: 1px solid var(--border); display: flex; flex-direction: column; background: var(--surface-2); height: 100%;">
+                <div style="padding: 12px; border-bottom: 1px solid var(--border);">
+                    <div style="position: relative;">
+                        <input type="text" id="quickMsgsTabSearch" placeholder="Buscar tipificación..." style="width: 100%; padding: 6px 10px 6px 28px; font-size: 12px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface); color: var(--text);">
+                        <i data-lucide="search" style="position: absolute; left: 8px; top: 50%; transform: translateY(-50%); width: 12px; height: 12px; color: var(--text-muted);"></i>
+                    </div>
+                </div>
+                <div id="quickMsgsTabsList" style="flex: 1; overflow-y: auto; display: flex; flex-direction: column;">
+                    <!-- Tabs will be rendered here dynamically -->
+                </div>
+            </div>
+            <!-- Right Panel for Messages under Active Tab -->
+            <div class="quick-msgs-content" style="flex: 1; display: flex; flex-direction: column; background: var(--surface); height: 100%;">
+                <div style="padding: 16px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap;">
+                    <div style="flex: 1; min-width: 200px;">
+                        <h4 id="quickMsgsActiveTabTitle" style="font-size: 14px; font-weight: 600; color: var(--text); margin: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 350px;">Por Defecto (General)</h4>
+                        <p style="font-size: 11.5px; color: var(--text-muted); margin: 2px 0 0 0;">Mensajes rápidos disponibles para esta tipificación.</p>
+                    </div>
+                    <div style="display: flex; gap: 6px; align-items: center;">
+                        <button class="btn btn-ghost" id="quickMsgsRestoreBtn" type="button" style="padding: 6px 10px; border: 1px solid var(--border); font-size: 12px; height: auto;" title="Restablecer mensajes de fábrica">
+                            <i data-lucide="rotate-ccw" style="width: 13px; height: 13px; margin-right: 4px;"></i> Restablecer
+                        </button>
+                        <button class="btn btn-primary" id="quickMsgsAddBtn" type="button" style="padding: 6px 12px; font-size: 12px; height: auto; display: flex; align-items: center; gap: 4px;">
+                            <i data-lucide="plus" style="width: 14px; height: 14px;"></i> Nuevo mensaje
+                        </button>
+                    </div>
+                </div>
+                <div id="quickMsgsList" style="padding: 16px; overflow-y: auto; flex: 1; display: flex; flex-direction: column; gap: 12px;">
+                    <!-- Se renderizará dinámicamente con JS -->
+                </div>
+            </div>
+        </div>
+        <div class="modal-footer" style="margin-top: 0;">
+            <button class="btn btn-ghost" id="quickMsgsModalCancel">Cancelar</button>
+            <button class="btn btn-primary" id="quickMsgsModalSave">Guardar cambios</button>
+        </div>
+    </div>
+</div>
+
+<!-- Modal de Retiro de Depósito (Periféricos: Modelo, Marca, Serial) -->
+<div class="modal-overlay" id="depotWithdrawalModal">
+    <div class="modal" style="max-width: 450px;">
+        <div class="modal-header">
+            <div style="display: flex; align-items: center; gap: 10px;">
+                <i data-lucide="package" style="color: var(--primary);"></i>
+                <h3>Información de Retiro de Depósito</h3>
+            </div>
+            <button class="close-btn" id="depotWithdrawalModalClose"><i data-lucide="x"></i></button>
+        </div>
+        <div class="modal-body">
+            <p style="margin-bottom: 12px; font-size: 0.9rem; color: var(--text-faint);">Ingresá los datos del artículo retirado del depósito.</p>
+            
+            <div class="field" style="margin-bottom: 12px;">
+                <label for="depotBrand">Marca <span style="color: var(--danger);">*</span></label>
+                <input type="text" id="depotBrand" placeholder="Ej: Jabra, Logitech, etc." style="width: 100%; padding: 8px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); color: var(--text);">
+            </div>
+            
+            <div class="field" style="margin-bottom: 12px;">
+                <label for="depotModel">Modelo <span style="color: var(--danger);">*</span></label>
+                <input type="text" id="depotModel" placeholder="Ej: Evolve 20, etc." style="width: 100%; padding: 8px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); color: var(--text);">
+            </div>
+            
+            <div class="field" style="margin-bottom: 12px;">
+                <label for="depotSerial">Número de Serie (Serial) <span style="color: var(--danger);">*</span></label>
+                <input type="text" id="depotSerial" placeholder="Ej: S/N o etiqueta" style="width: 100%; padding: 8px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); color: var(--text);">
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-ghost" id="depotWithdrawalModalCancel">Cancelar</button>
+            <button class="btn btn-primary" id="depotWithdrawalModalSave">Guardar</button>
+        </div>
+    </div>
+</div>
+
+<div id="customContextMenu" class="context-menu hidden">
+    <div class="context-menu-item">
+        <div style="display: flex; align-items: center; gap: 8px;">
+            <i data-lucide="folder-output"></i>
+            <span>Mover hacia:</span>
+        </div>
+        <i data-lucide="chevron-right" style="width: 12px; height: 12px; margin-left: auto;"></i>
+        <div class="context-submenu" id="contextMenuSubmenu"></div>
+    </div>
+</div>
+<div class="modal-overlay" id="attachmentPreviewModal" style="z-index: 9500;">
+    <div class="modal" style="width: 90%; max-width: 900px; max-height: 90vh; display: flex; flex-direction: column; padding: 0; border-radius: var(--radius); overflow: hidden; background: var(--surface);">
+        <div class="modal-header" style="display: flex; justify-content: space-between; align-items: center; padding: 12px 16px; border-bottom: 1px solid var(--border);">
+            <h3 id="attachmentPreviewTitle" style="margin: 0; font-size: 15px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 80%;">Vista previa</h3>
+            <button class="close-btn" id="attachmentPreviewClose"><i data-lucide="x"></i></button>
+        </div>
+        <div class="modal-body" id="attachmentPreviewBody" style="padding: 0; flex: 1; min-height: 450px; height: 70vh; display: flex; justify-content: center; align-items: center; overflow: auto; background: #2f2f2f;">
+            <!-- Contenido inyectado dinámicamente -->
+        </div>
+    </div>
+</div>
+
+<!-- Modal: editar usuario (métricas) -->
+<div class="modal-overlay" id="metricsUserEditOverlay">
+    <div class="modal" style="max-width:460px;">
+        <div class="modal-header">
+            <div style="display:flex;align-items:center;gap:8px;"><i data-lucide="user-pen" style="color:var(--primary);"></i><h3>Editar Usuario</h3></div>
+            <button class="close-btn" id="metricsEditCloseBtn" onclick="document.getElementById('metricsUserEditOverlay').classList.remove('open')"><i data-lucide="x"></i></button>
+        </div>
+        <div class="modal-body">
+            <input type="hidden" id="metricsEditUserId">
+            <div class="field-grid">
+                <div class="field field-full">
+                    <label>Usuario</label>
+                    <input type="text" id="metricsEditUsername" readonly style="opacity:.55;cursor:not-allowed;">
+                </div>
+                <div class="field field-full">
+                    <label>Nombre completo</label>
+                    <input type="text" id="metricsEditName" placeholder="Ej: Juan Pérez">
+                </div>
+                <div class="field field-full">
+                    <label>Email</label>
+                    <input type="email" id="metricsEditEmail" placeholder="Ej: jperez@empresa.com">
+                </div>
+                <div class="field">
+                    <label>Organización</label>
+                    <input type="text" id="metricsEditOrg" placeholder="Ej: Solverbat">
+                </div>
+                <div class="field">
+                    <label>Rol</label>
+                    <select id="metricsEditRole">
+                        <option value="1">Técnico</option>
+                        <option value="2">Dispatcher (Admin)</option>
+                    </select>
+                </div>
+                <div class="field">
+                    <label>Nivel Técnico</label>
+                    <select id="metricsEditNivel">
+                        <option value="1">Nivel 1 (N1 - Hardware)</option>
+                        <option value="2">Nivel 2 (N2 - Configuración)</option>
+                    </select>
+                </div>
+                <div class="field field-full">
+                    <label>Nueva contraseña <span style="color:var(--text-muted);font-weight:400;">(vacío = sin cambios)</span></label>
+                    <input type="password" id="metricsEditPassword" placeholder="••••••••">
+                </div>
+            </div>
+            <div id="metricsEditError" style="display:none;padding:8px 12px;background:rgba(164,38,44,.08);border:1px solid rgba(164,38,44,.3);border-radius:var(--radius);color:var(--danger);font-size:12.5px;margin-top:8px;"></div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-ghost" id="metricsEditCancelBtn">Cancelar</button>
+            <button class="btn btn-primary" id="metricsEditSaveBtn"><i data-lucide="save" style="width:14px;height:14px;"></i> Guardar</button>
+        </div>
+    </div>
+</div>
+
+<!-- Modal: crear usuario (métricas) -->
+<div class="modal-overlay" id="metricsCreateOverlay">
+    <div class="modal" style="max-width:460px;">
+        <div class="modal-header">
+            <div style="display:flex;align-items:center;gap:8px;"><i data-lucide="user-plus" style="color:var(--primary);"></i><h3>Nuevo Usuario</h3></div>
+            <button class="close-btn" id="metricsCreateCloseBtn" onclick="document.getElementById('metricsCreateOverlay').classList.remove('open')"><i data-lucide="x"></i></button>
+        </div>
+        <div class="modal-body">
+            <div class="field-grid">
+                <div class="field">
+                    <label>Usuario</label>
+                    <input type="text" id="metricsCreateUsername" placeholder="Ej: jperez" autocomplete="off">
+                </div>
+                <div class="field">
+                    <label>Contraseña</label>
+                    <input type="password" id="metricsCreatePassword" placeholder="••••••••">
+                </div>
+                <div class="field field-full">
+                    <label>Nombre completo</label>
+                    <input type="text" id="metricsCreateName" placeholder="Ej: Juan Pérez">
+                </div>
+                <div class="field field-full">
+                    <label>Email</label>
+                    <input type="email" id="metricsCreateEmail" placeholder="Ej: jperez@empresa.com">
+                </div>
+                <div class="field">
+                    <label>Organización</label>
+                    <input type="text" id="metricsCreateOrg" placeholder="Ej: Solverbat">
+                </div>
+                <div class="field">
+                    <label>Rol</label>
+                    <select id="metricsCreateRole">
+                        <option value="1">Técnico</option>
+                        <option value="2">Dispatcher (Admin)</option>
+                    </select>
+                </div>
+                <div class="field">
+                    <label>Nivel Técnico</label>
+                    <select id="metricsCreateNivel">
+                        <option value="1">Nivel 1 (N1 - Hardware)</option>
+                        <option value="2">Nivel 2 (N2 - Configuración)</option>
+                    </select>
+                </div>
+            </div>
+            <div id="metricsCreateError" style="display:none;padding:8px 12px;background:rgba(164,38,44,.08);border:1px solid rgba(164,38,44,.3);border-radius:var(--radius);color:var(--danger);font-size:12.5px;margin-top:8px;"></div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-ghost" id="metricsCreateCancelBtn">Cancelar</button>
+            <button class="btn btn-primary" id="metricsCreateSaveBtn"><i data-lucide="user-plus" style="width:14px;height:14px;"></i> Crear usuario</button>
+        </div>
+    </div>
+</div>
+
+<!-- Modal: Reporte Estadístico por Empresa (Empresa Principal vs. Subsidiaria) -->
+<div class="modal-overlay" id="statsReportOverlay" style="z-index:9200;">
+    <div class="modal" style="max-width:1150px;width:95%;max-height:92vh;display:flex;flex-direction:column;padding:0;overflow:hidden;border-radius:var(--radius-md);background:var(--surface);">
+        <!-- Modal Header -->
+        <div class="modal-header" style="padding:16px 20px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;background:var(--surface);">
+            <div>
+                <div style="display:flex;align-items:center;gap:10px;">
+                    <i data-lucide="file-spreadsheet" style="color:var(--primary);width:22px;height:22px;"></i>
+                    <h3 style="font-size:16px;font-weight:700;margin:0;color:var(--text);">Reporte Total por Empresa (Extracción por Dominio)</h3>
+                    <span style="font-size:11px;font-weight:700;background:rgba(0,120,212,0.1);color:var(--primary);padding:2px 8px;border-radius:10px;">MÉTRICAS INDEPENDIENTES</span>
+                </div>
+                <p style="font-size:12px;color:var(--text-muted);margin:4px 0 0 0;">
+                    Visualiza datos reales de Remedy (<code>Company</code>), catalogación corporativa, dominios y tipificaciones para Empresa Principal y Subsidiaria estrictamente separados.
+                </p>
+            </div>
+            <div style="display:flex;align-items:center;gap:8px;">
+                <button id="btnReportCopySummary" class="btn btn-secondary btn-sm" style="height:32px;font-size:12px;display:inline-flex;align-items:center;gap:6px;" title="Copiar resumen en texto limpio">
+                    <i data-lucide="copy" style="width:13px;height:13px;"></i> Copiar Resumen
+                </button>
+                <button id="btnReportExportCsv" class="btn btn-secondary btn-sm" style="height:32px;font-size:12px;display:inline-flex;align-items:center;gap:6px;" title="Descargar datos en formato CSV plano">
+                    <i data-lucide="file-text" style="width:13px;height:13px;"></i> CSV
+                </button>
+                <button id="btnReportExportExcel" class="btn btn-primary btn-sm" style="height:32px;font-size:12px;display:inline-flex;align-items:center;gap:6px;font-weight:700;background:var(--success, #10b981);border-color:var(--success, #10b981);" title="Descargar libro Excel (.xlsx) con hojas separadas, tablas estructuradas y listado de tickets">
+                    <i data-lucide="file-spreadsheet" style="width:14px;height:14px;"></i> Exportar Excel (.xlsx)
+                </button>
+                <button class="close-btn" id="btnStatsReportClose" style="margin-left:6px;"><i data-lucide="x"></i></button>
+            </div>
+        </div>
+
+        <!-- Barra de Controles y Filtros del Reporte -->
+        <div style="padding:12px 20px;background:var(--surface-2);border-bottom:1px solid var(--border);display:flex;align-items:center;gap:16px;flex-wrap:wrap;">
+            <!-- Selector de Empresa -->
+            <div style="display:flex;align-items:center;gap:8px;">
+                <label style="font-size:11.5px;font-weight:700;color:var(--text-muted);text-transform:uppercase;">Empresa:</label>
+                <select id="reportFilterCompany" style="padding:5px 10px;font-size:12.5px;font-weight:600;border:1px solid var(--border);border-radius:var(--radius);background:var(--surface);color:var(--text);font-family:inherit;cursor:pointer;">
+                    <option value="all" selected>Todas las empresas (Separadas)</option>
+                    <option value="empresa">Solo Empresa Principal</option>
+                    <option value="subsidiaria">Solo Subsidiaria</option>
+                </select>
+            </div>
+
+            <!-- Selector de Mes -->
+            <div style="display:flex;align-items:center;gap:8px;">
+                <label style="font-size:11.5px;font-weight:700;color:var(--text-muted);text-transform:uppercase;">Mes:</label>
+                <select id="reportFilterMonth" style="padding:5px 10px;font-size:12.5px;border:1px solid var(--border);border-radius:var(--radius);background:var(--surface);color:var(--text);font-family:inherit;cursor:pointer;">
+                    <option value="all">Todos los meses (Histórico)</option>
+                </select>
+            </div>
+
+            <!-- Selector de Estado -->
+            <div style="display:flex;align-items:center;gap:8px;">
+                <label style="font-size:11.5px;font-weight:700;color:var(--text-muted);text-transform:uppercase;">Estado:</label>
+                <select id="reportFilterStatus" style="padding:5px 10px;font-size:12.5px;border:1px solid var(--border);border-radius:var(--radius);background:var(--surface);color:var(--text);font-family:inherit;cursor:pointer;">
+                    <option value="">Todos los estados</option>
+                    <option value="open">Solo Abiertos</option>
+                    <option value="closed">Solo Cerrados / Resueltos</option>
+                </select>
+            </div>
+
+            <!-- Selector de Tipo -->
+            <div style="display:flex;align-items:center;gap:8px;">
+                <label style="font-size:11.5px;font-weight:700;color:var(--text-muted);text-transform:uppercase;">Tipo:</label>
+                <select id="reportFilterType" style="padding:5px 10px;font-size:12.5px;border:1px solid var(--border);border-radius:var(--radius);background:var(--surface);color:var(--text);font-family:inherit;cursor:pointer;">
+                    <option value="">Todos (INC + WO)</option>
+                    <option value="INC">Solo Incidentes (INC)</option>
+                    <option value="WO">Solo Work Orders (WO)</option>
+                </select>
+            </div>
+
+            <!-- Selector de Canal / Origen (Jarvis vs Otros) -->
+            <div style="display:flex;align-items:center;gap:8px;">
+                <label style="font-size:11.5px;font-weight:700;color:var(--text-muted);text-transform:uppercase;">Canal / Origen:</label>
+                <select id="reportFilterOrigin" style="padding:5px 10px;font-size:12.5px;border:1px solid var(--border);border-radius:var(--radius);background:var(--surface);color:var(--text);font-family:inherit;cursor:pointer;">
+                    <option value="all" selected>Todos (Jarvis + Otros)</option>
+                    <option value="jarvis">Solo JARVIS CHATBOT</option>
+                    <option value="no_jarvis">Solo Otros Canales (No Jarvis)</option>
+                </select>
+            </div>
+
+            <!-- Botón Refrescar Reporte -->
+            <button id="btnReportRefresh" class="btn btn-ghost btn-sm" style="font-size:11.5px;height:28px;display:inline-flex;align-items:center;gap:4px;">
+                <i data-lucide="refresh-cw" style="width:12px;height:12px;"></i> Actualizar
+            </button>
+
+            <!-- Badge Resumen Universo -->
+            <div style="margin-left:auto;display:flex;align-items:center;gap:8px;">
+                <span id="reportUniverseBadge" style="font-size:12px;color:var(--text);background:var(--surface);padding:4px 10px;border-radius:var(--radius);border:1px solid var(--border);font-weight:700;">
+                    0 tickets procesados
+                </span>
+            </div>
+        </div>
+
+        <!-- Modal Body: Contenido Desglosado y Separado -->
+        <div class="modal-body" id="reportModalBody" style="padding:18px 20px;overflow-y:auto;flex:1;background:var(--bg-deep);min-height:360px;">
+            <!-- Spinner de Carga -->
+            <div id="reportLoadingSpinner" style="display:none;align-items:center;justify-content:center;padding:60px;gap:12px;">
+                <i data-lucide="loader-2" class="spin" style="width:24px;height:24px;color:var(--primary);"></i>
+                <span style="font-size:13.5px;color:var(--text-muted);">Generando reporte por empresa...</span>
+            </div>
+
+            <!-- Contenedor dinámico de Empresas (cards independientes) -->
+            <div id="reportCardsContainer" style="display:flex;flex-direction:column;gap:20px;"></div>
+        </div>
+    </div>
+</div>
+
+<div class="toast-container" id="toast-container"></div>
+
+<!-- Carga del entry point de la aplicación en modo módulo ES6. El grafo de dependencias se resuelve dinámicamente -->
+<script src="/js/ui/metrics.js?v=1"></script>
+<script src="/js/ui/dispatcher.js?v=1"></script>
+<script src="/js/ui/admin_stats.js?v=1"></script>
+<script src="/js/boot/init.js?v=2" type="module"></script>
+</body>
+</html>

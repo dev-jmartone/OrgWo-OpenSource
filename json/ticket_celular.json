@@ -1,0 +1,83 @@
+{
+  "_comentario": "Ejemplo de ticket tipificado como 'Celular' (Móvil / Smartphone). Muestra la extracción a partir de una Work Order (WO) de telefonía.",
+  "tipificacion_elemento": "Celular",
+  "origen_remedy": {
+    "formulario": "WOI:WorkOrder",
+    "endpoint": "/api/arsys/v1/entry/WOI:WorkOrder",
+    "tipo_ticket": "WO",
+    "grupo_asignado": "TECNOLOGIA CELULARES"
+  },
+  "remedy_raw_api_values": {
+    "Work Order ID": "WO000001095482",
+    "Summary": "Entrega de nuevo celular corporativo por renovación de flota",
+    "Detailed Description": "Solicitud de recambio de equipo móvil. Usuario: LUCIA FERNANDEZ (lfernandez@empresa.com). Se asigna Samsung Galaxy A54 con línea Movistar corporativa.",
+    "Submit Date": 1713268800,
+    "Last Modified Date": 1713355200,
+    "Status": "4",
+    "Customer First Name": "LUCIA",
+    "Customer Last Name": "FERNANDEZ",
+    "Submitter": "lfernandez",
+    "ASLOGID": "agonzalez",
+    "Support Group Name": "TECNOLOGIA CELULARES",
+    "Company": "EMPRESA",
+    "Next Target Date": 1713441600,
+    "SLM Status": "Within SLM",
+    "Categorization Tier 1": "Telefonía",
+    "Categorization Tier 2": "Líneas Móviles",
+    "Categorization Tier 3": "Smartphone"
+  },
+  "registro_almacenado_en_base_datos": {
+    "id": "WO000001095482",
+    "ticket_type": "WO",
+    "group_name": "TECNOLOGIA CELULARES",
+    "status_raw": "4",
+    "status_mapped": "4",
+    "status_nombre": "Resuelto / Cerrado",
+    "summary": "Entrega de nuevo celular corporativo por renovación de flota",
+    "description": "Solicitud de recambio de equipo móvil. Usuario: LUCIA FERNANDEZ (lfernandez@empresa.com). Se asigna Samsung Galaxy A54 con línea Movistar corporativa.",
+    "client_name": "Lucia Fernandez",
+    "client_email": "lfernandez@empresa.com",
+    "assignee_login": "agonzalez",
+    "assignee_name": "Agustin Gonzalez",
+    "remedy_company": "EMPRESA",
+    "is_jarvis": 0,
+    "user_company": "Empresa Principal",
+    "element_type": "Celular",
+    "tipificacion": "Smartphone",
+    "sla_status": "Within SLM",
+    "submit_date": "2026-04-16 12:00:00",
+    "submit_month": "2026-04",
+    "last_modified_date": "2026-04-17 12:00:00"
+  },
+  "pipeline_como_se_obtuvo_la_informacion": {
+    "1_deteccion_jarvis": {
+      "metodo": "Revisión de submitter ('lfernandez') y Customer First/Last Name. No contiene palabras de bot.",
+      "resultado_is_jarvis": 0
+    },
+    "2_extraccion_solicitante": {
+      "metodo": "Concatenación de 'Customer First Name' y 'Customer Last Name' con función smart_case_name() para convertir MAYÚSCULAS en Title-Case.",
+      "nombre_crudo_remedy": "LUCIA FERNANDEZ",
+      "nombre_normalizado": "Lucia Fernandez"
+    },
+    "3_extraccion_email_y_dominio": {
+      "metodo": "Regex '[\\w\\.-]+@[\\w\\.-]+\\.\\w+' sobre Detailed Description detectó 'lfernandez@empresa.com'.",
+      "email_obtenido": "lfernandez@empresa.com",
+      "dominio_extraido": "@empresa.com"
+    },
+    "4_resolucion_empresa_usuario": {
+      "regla": "Dominio @empresa.com se normaliza como Empresa Principal. Confirmado por campo Company 'EMPRESA'.",
+      "empresa_remedy_original": "EMPRESA",
+      "empresa_final_asignada": "Empresa Principal"
+    },
+    "5_tipificacion_hardware": {
+      "regla": "Función parse_element_type() detecta 'celular' y 'móvil' en el texto.",
+      "tipificacion_elemento": "Celular",
+      "categorizacion_bmc": "Smartphone (Tier 3)"
+    },
+    "6_normalizacion_tiempo": {
+      "fecha_origen_epoch": 1713268800,
+      "submit_month_generado": "2026-04",
+      "mes_etiqueta": "Abril 2026"
+    }
+  }
+}

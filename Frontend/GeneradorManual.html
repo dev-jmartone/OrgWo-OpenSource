@@ -1,0 +1,2003 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Generador Manual de Templates — OrgWo</title>
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script src="https://cdn.jsdelivr.net/npm/lucide@0.453.0/dist/umd/lucide.min.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root {
+    /* Fluent Microsoft theme colors */
+    --primary: #0078D4;
+    --primary-hover: #106EBE;
+    --primary-soft: #DEECF9;
+    --bg-color: #FAF9F8;
+    --bg-deep: #FFFFFF;
+    --surface: #FFFFFF;
+    --surface-2: #F3F2F1;
+    --text: #201F1E;
+    --text-muted: #605E5C;
+    --text-faint: #8A8886;
+    --border: #E1DFDD;
+    --border-soft: #EDEBE9;
+    --shadow: 0 1.6px 3.6px rgba(0,0,0,0.08), 0 0.3px 0.9px rgba(0,0,0,0.06);
+    --shadow-hover: 0 6.4px 14.4px rgba(0,0,0,0.13), 0 1.2px 3.6px rgba(0,0,0,0.10);
+    --radius: 6px;
+    --danger: #A4262C;
+    --success: #107C10;
+    --accent: #5C2D91;
+}
+
+:root[data-theme="dark"] {
+    --primary-soft: #1F3A5F;
+    --bg-color: #1B1A19;
+    --bg-deep: #201F1E;
+    --surface: #252423;
+    --surface-2: #2D2C2B;
+    --text: #F3F2F1;
+    --text-muted: #C8C6C4;
+    --text-faint: #8A8886;
+    --border: #3B3A39;
+    --border-soft: #323130;
+    --shadow: 0 4px 12px rgba(0,0,0,0.3);
+    --shadow-hover: 0 8px 24px rgba(0,0,0,0.4);
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Segoe UI', 'Segoe UI Variable', -apple-system, BlinkMacSystemFont, 'Inter', sans-serif;
+    background: var(--bg-color);
+    color: var(--text);
+    line-height: 1.5;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    overflow-x: hidden;
+}
+
+header {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 12px 24px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    box-shadow: var(--shadow);
+}
+
+.brand {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.brand-mark {
+    background: var(--primary);
+    color: #fff;
+    width: 32px;
+    height: 32px;
+    border-radius: var(--radius);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 800;
+    font-size: 1.1rem;
+}
+
+.brand-title {
+    font-size: 1.2rem;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+}
+
+.brand-tag {
+    font-size: 0.75rem;
+    background: var(--primary-soft);
+    color: var(--primary);
+    padding: 2px 6px;
+    border-radius: 99px;
+    font-weight: 600;
+}
+
+.actions-top {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    border: 1px solid transparent;
+    padding: 8px 16px;
+    font-size: 0.875rem;
+    font-weight: 600;
+    border-radius: var(--radius);
+    cursor: pointer;
+    transition: all 0.2s ease;
+    text-decoration: none;
+    font-family: inherit;
+}
+
+.btn-primary {
+    background: var(--primary);
+    color: #fff;
+}
+.btn-primary:hover {
+    background: var(--primary-hover);
+}
+
+.btn-secondary {
+    background: var(--surface-2);
+    color: var(--text);
+    border-color: var(--border);
+}
+.btn-secondary:hover {
+    background: var(--border-soft);
+}
+
+.btn-ghost {
+    background: transparent;
+    color: var(--text-muted);
+}
+.btn-ghost:hover {
+    background: var(--surface-2);
+    color: var(--text);
+}
+
+.main-container {
+    display: flex;
+    flex: 1;
+    min-height: 0;
+    width: 100%;
+}
+
+.editor-pane {
+    flex: 1;
+    padding: 24px;
+    overflow-y: auto;
+    border-right: 1px solid var(--border);
+    max-height: 100vh;
+}
+
+.preview-pane {
+    width: 650px;
+    padding: 24px;
+    background: var(--bg-deep);
+    overflow-y: auto;
+    max-height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+
+.floating-theme-toggle {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    z-index: 1000;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    color: var(--text-muted);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    box-shadow: var(--shadow);
+    transition: all 0.2s ease;
+}
+.floating-theme-toggle:hover {
+    transform: scale(1.1);
+    color: var(--text);
+    background: var(--surface-2);
+}
+
+.section-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 20px;
+    margin-bottom: 20px;
+    box-shadow: var(--shadow);
+}
+
+.section-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+    border-bottom: 1px solid var(--border-soft);
+    padding-bottom: 10px;
+}
+
+.section-card-header h3 {
+    font-size: 1rem;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.field-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 16px;
+}
+
+.field-full {
+    grid-column: 1 / -1;
+}
+
+.field {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.field label {
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    letter-spacing: 0.03em;
+}
+
+.field input, .field select, .field textarea {
+    padding: 8px 12px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: var(--surface);
+    color: var(--text);
+    font-family: inherit;
+    font-size: 0.875rem;
+    width: 100%;
+    outline: none;
+    transition: border-color 0.2s ease;
+}
+
+.field input:focus, .field select:focus, .field textarea:focus {
+    border-color: var(--primary);
+}
+
+.field input.is-invalid, .field select.is-invalid, .field textarea.is-invalid {
+    border-color: var(--danger);
+    background-color: rgba(164, 38, 44, 0.03);
+}
+
+.field-error {
+    font-size: 0.75rem;
+    color: var(--danger);
+    margin-top: 2px;
+}
+
+/* Items list visual style */
+.item-card {
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 16px;
+    margin-bottom: 12px;
+    position: relative;
+}
+
+.item-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+}
+
+.item-card-title {
+    font-weight: 700;
+    font-size: 0.875rem;
+    color: var(--primary);
+}
+
+.item-remove {
+    background: transparent;
+    border: none;
+    color: var(--danger);
+    cursor: pointer;
+    padding: 4px;
+    border-radius: 4px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+.item-remove:hover {
+    background: rgba(164, 38, 44, 0.1);
+}
+
+.preview-container {
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: #FFFFFF; /* standard email bg is white */
+    padding: 24px;
+    flex: 1;
+    box-shadow: var(--shadow);
+    color: #000000;
+    overflow-x: auto;
+}
+
+.preview-title {
+    font-weight: 700;
+    color: var(--text-muted);
+    font-size: 0.85rem;
+    margin-bottom: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.subject-bar {
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 10px 16px;
+    font-size: 0.9rem;
+    margin-bottom: 16px;
+    font-weight: bold;
+    color: var(--text);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.preview-scroll-wrapper {
+    background: #ffffff;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 24px;
+    flex: 1;
+    overflow-y: auto;
+    color: #000000;
+}
+
+.preview-actions {
+    display: flex;
+    gap: 10px;
+    margin-top: 16px;
+    flex-wrap: wrap;
+}
+
+.warning-banner {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    background: rgba(193, 156, 0, 0.08);
+    border: 1px solid rgba(193, 156, 0, 0.3);
+    color: var(--text);
+    border-radius: var(--radius);
+    padding: 12px;
+    margin-bottom: 16px;
+    font-size: 0.8rem;
+}
+
+/* Responsive grid changes */
+@media (max-width: 1200px) {
+    .main-container {
+        flex-direction: column;
+    }
+    .editor-pane {
+        max-height: none;
+    }
+    .preview-pane {
+        width: 100%;
+        max-height: none;
+        border-top: 1px solid var(--border);
+    }
+}
+</style>
+</head>
+<body>
+
+<button class="floating-theme-toggle" id="themeToggle" title="Cambiar tema">
+    <i data-lucide="sun"></i>
+</button>
+
+<a href="GeneradorVisa.html" class="floating-theme-toggle" id="visaToggle" title="Generador VISA Masivo" style="right: 70px; text-decoration: none; color: var(--text-muted);">
+    <i data-lucide="file-spreadsheet"></i>
+</a>
+
+<main class="main-container">
+    <!-- Left panel: form editor -->
+    <section class="editor-pane">
+        <form id="planillaForm" onsubmit="return false;">
+            <!-- General Settings -->
+            <div class="section-card">
+                <div class="section-card-header">
+                    <h3><i data-lucide="settings"></i> Datos del Template</h3>
+                </div>
+                <div class="field-grid">
+                    <div class="field">
+                        <label for="planAction">Acción</label>
+                        <select id="planAction"></select>
+                    </div>
+                    <div class="field">
+                        <label for="planReason">Razón</label>
+                        <select id="planReason"></select>
+                    </div>
+                    <div class="field">
+                        <label for="planLogistics">Logística</label>
+                        <select id="planLogistics">
+                            <option value="presencial">Presencial</option>
+                            <option value="correo_interno">Correo interno</option>
+                        </select>
+                    </div>
+                    <div class="field">
+                        <label for="planTicket">Número de Ticket (WO / INC / REQ)</label>
+                        <input type="text" id="planTicket" placeholder="INC00000XXXXXXXX o WO00000XXXXXXX">
+                        <small class="field-error" id="error-planTicket"></small>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Entities involved -->
+            <div class="section-card">
+                <div class="section-card-header">
+                    <h3><i data-lucide="users"></i> Personas e Involucrados</h3>
+                </div>
+                <div class="field-grid">
+                    <div class="field">
+                        <label for="planEmpresa">Empresa Propietaria</label>
+                        <input type="text" id="planEmpresa" placeholder="Empresa Principal, Subsidiaria, Proveedor" list="dlEmpresas">
+                        <button type="button" id="btnAgregarConsultora" style="display: none; padding: 4px 8px; font-size: 11px; margin-top: 4px; border: 1px dashed var(--primary, #0078d4); color: var(--primary, #0078d4); background: transparent; border-radius: 4px; cursor: pointer; width: fit-content; font-family: inherit;">+ Agregar Consultora</button>
+                    </div>
+                    <div class="field">
+                        <label for="planTecnico">Técnico que entrega (Firma)</label>
+                        <input type="text" id="planTecnico" placeholder="Nombre del Técnico">
+                    </div>
+                    <div class="field">
+                        <label for="planPersonaRetira">Persona que retira / recibe</label>
+                        <input type="text" id="planPersonaRetira" placeholder="Nombre completo del usuario">
+                        <small class="field-error" id="error-planPersonaRetira"></small>
+                    </div>
+                    <div class="field">
+                        <label for="planEmailRetira">Email del usuario</label>
+                        <input type="email" id="planEmailRetira" placeholder="usuario@empresa.com">
+                    </div>
+                </div>
+                <div class="warning-banner" id="externalUserWarning" style="display: none;">
+                    <i data-lucide="alert-triangle" style="flex-shrink: 0; color: var(--warn);"></i>
+                    <div>El email ingresado corresponde a un usuario externo. Verificá y confirmá manualmente la empresa propietaria del equipo.</div>
+                </div>
+            </div>
+
+            <!-- Greeting section -->
+            <div class="section-card">
+                <div class="section-card-header">
+                    <h3><i data-lucide="mail"></i> Saludo del Email</h3>
+                    <button type="button" class="btn btn-secondary btn-xs" id="btnToggleSaludoEditor" style="padding: 4px 8px; font-size: 0.75rem;">
+                        Personalizar Saludo
+                    </button>
+                </div>
+                <div class="field" id="saludoSelectorWrap">
+                    <label for="planSaludoSelect">Elegir Saludo</label>
+                    <select id="planSaludoSelect">
+                        <option value="">Predeterminado automático</option>
+                    </select>
+                </div>
+                <div class="field" id="saludoEditorWrap" style="display: none; margin-top: 12px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                        <label for="planSaludo">Texto del Saludo</label>
+                        <div style="display: flex; gap: 6px;">
+                            <button type="button" class="btn btn-ghost" id="btnLoadDefaultSaludo" style="padding: 2px 6px; font-size: 11px;">Default</button>
+                            <button type="button" class="btn btn-ghost" id="btnResetSaludo" style="padding: 2px 6px; font-size: 11px; color: var(--danger);">Limpiar</button>
+                        </div>
+                    </div>
+                    <textarea id="planSaludo" rows="4" placeholder="Podés usar tokens: {saludo}, {fecha}, {elemento}, {persona}"></textarea>
+                </div>
+            </div>
+
+            <!-- Observations section -->
+            <div class="section-card">
+                <div class="section-card-header">
+                    <h3><i data-lucide="message-square"></i> Observación del Email</h3>
+                    <button type="button" class="btn btn-secondary btn-xs" id="btnToggleObsEditor" style="padding: 4px 8px; font-size: 0.75rem;">
+                        Personalizar Observaciones
+                    </button>
+                </div>
+                <div class="field" id="obsEditorWrap" style="display: none; margin-top: 12px; flex-direction: column; gap: 10px;">
+                    <div class="field">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                            <label for="planObsEgreso">Template para Egresos</label>
+                            <div style="display: flex; gap: 6px;">
+                                <button type="button" class="btn btn-ghost" id="btnLoadDefaultObsEgreso" style="padding: 2px 6px; font-size: 11px;">Default</button>
+                            </div>
+                        </div>
+                        <textarea id="planObsEgreso" rows="3" placeholder="Podés usar tokens: {elemento}, {articulo_elemento}, {persona}, {marca}, {modelo}, {serie}, {ticket}, {fecha}"></textarea>
+                    </div>
+                    <div class="field">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                            <label for="planObsIngreso">Template para Ingresos</label>
+                            <div style="display: flex; gap: 6px;">
+                                <button type="button" class="btn btn-ghost" id="btnLoadDefaultObsIngreso" style="padding: 2px 6px; font-size: 11px;">Default</button>
+                            </div>
+                        </div>
+                        <textarea id="planObsIngreso" rows="3" placeholder="Podés usar tokens: {elemento}, {articulo_elemento}, {persona}, {marca}, {modelo}, {serie}, {ticket}, {fecha}"></textarea>
+                    </div>
+                    <div style="display: flex; justify-content: flex-end; gap: 6px;">
+                        <button type="button" class="btn btn-ghost" id="btnResetObs" style="padding: 2px 6px; font-size: 11px; color: var(--danger);">Limpiar</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Items dynamic section -->
+            <div class="section-card">
+                <div class="section-card-header">
+                    <h3><i data-lucide="package"></i> Ítems del Movimiento</h3>
+                    <button type="button" class="btn btn-primary" id="btnAddItem" style="padding: 6px 12px; font-size: 0.8rem;">
+                        <i data-lucide="plus" style="width: 14px; height: 14px;"></i> Agregar ítem
+                    </button>
+                </div>
+                <div id="itemsContainer">
+                    <!-- Dynamic items will be added here -->
+                </div>
+                <small class="field-error" id="error-itemsList" style="display: none; font-size: 0.8rem; margin-top: 10px;"></small>
+            </div>
+        </form>
+    </section>
+
+    <!-- Right panel: live template preview -->
+    <section class="preview-pane">
+        <div class="preview-title">
+            <i data-lucide="eye"></i> Vista Previa del Template
+        </div>
+        <div class="subject-bar">
+            <div>
+                <span style="font-weight: normal; color: var(--text-muted); font-size: 0.8rem; margin-right: 4px;">Asunto:</span>
+                <span id="previewSubject">—</span>
+            </div>
+            <button class="btn btn-ghost" id="btnCopySubject" title="Copiar Asunto" style="padding: 4px 8px;">
+                <i data-lucide="copy" style="width: 14px; height: 14px;"></i>
+            </button>
+        </div>
+
+        <div class="preview-scroll-wrapper" id="previewHtmlBody">
+            <!-- Rendered template body -->
+        </div>
+
+        <div class="preview-actions">
+            <button class="btn btn-primary" id="btnSendOutlook" style="flex: 1;">
+                <i data-lucide="mail"></i> Enviar por Outlook (App)
+            </button>
+            <button class="btn btn-secondary" id="btnClearAll" style="flex: 1;">
+                <i data-lucide="trash-2"></i> Limpiar Formulario
+            </button>
+        </div>
+    </section>
+</main>
+
+<datalist id="dlEmpresas">
+    <option value="Proveedor TI">
+    <option value="Empresa Principal">
+    <option value="Subsidiaria">
+    <option value="Servicios Operativos">
+</datalist>
+<datalist id="dlMarcas">
+    <option value="Lenovo">
+    <option value="Dell">
+    <option value="HP">
+    <option value="Samsung">
+    <option value="Motorola">
+    <option value="Apple">
+    <option value="Logitech">
+    <option value="Jabra">
+</datalist>
+
+<script>
+// ============================================================
+// CONSTANTS & REGISTRIES
+// ============================================================
+const ITEM_TYPES = {
+    PC:        { label: 'Notebook / PC',     fields: ['marca','modelo','serie'],                   labelTipo: 'máquina',            labelTicket: 'a la configuración de la PC', labelRetira: 'el equipo' },
+    CEL:       { label: 'Celular',           fields: ['marca','modelo','serie','imei1','imei2'],   labelTipo: 'celular',            labelTicket: '',                            labelRetira: 'el celular' },
+    MONITOR:   { label: 'Monitor',           fields: ['marca','modelo','serie'],                   labelTipo: 'monitor',            labelTicket: '',                            labelRetira: 'el monitor' },
+    KIT:       { label: 'Kit Inalámbrico',   fields: ['marca','modelo','serie'],                   labelTipo: 'kit inalámbrico',    labelTicket: 'del kit',                     labelRetira: 'el kit',     defaultMarca: 'Logitech', defaultModelo: 'MK235' },
+    VINCHA:    { label: 'Vincha',            fields: ['marca','modelo','serie'],                   labelTipo: 'vincha',             labelTicket: 'de la vincha',                labelRetira: 'la vincha',  defaultMarca: 'Jabra',    defaultModelo: 'Evolve 20' },
+    CARGADOR:  { label: 'Cargador',          fields: ['marca','modelo','serie'],                   labelTipo: 'cargador',           labelTicket: '',                            labelRetira: 'el cargador' },
+    ADAPTADOR: { label: 'Adaptador',         fields: ['marca','modelo'],                           labelTipo: 'adaptador',          labelTicket: '',                            labelRetira: 'el adaptador' },
+    HDMI:      { label: 'Cable HDMI',        fields: ['marca'],                                    labelTipo: 'cable HDMI',         labelTicket: '',                            labelRetira: 'el cable' },
+    PARLANTE:  { label: 'Parlante',          fields: ['marca','modelo','serie'],                   labelTipo: 'parlante',           labelTicket: '',                            labelRetira: 'el parlante' },
+};
+
+const MOV_TYPES = {
+    egreso:        { label: 'Egreso',                  short: 'Egreso',     templateLabel: 'Egreso',                       equipmentRole: 'new' },
+    ingreso:       { label: 'Ingreso',                 short: 'Ingreso',    templateLabel: 'Ingreso',                      equipmentRole: 'old' },
+    egreso_wipe:   { label: 'Egreso (wipe presencial)', short: 'Egreso w.', templateLabel: 'Wipe Presencial - Egreso',     equipmentRole: 'old' },
+    ingreso_wipe:  { label: 'Ingreso (wipe presencial)',short: 'Ingreso w.',templateLabel: 'Ingreso Wipe Presencial',      equipmentRole: 'old' },
+};
+
+const PERIPHERAL_TYPES = ['KIT','VINCHA','CARGADOR','ADAPTADOR','HDMI','PARLANTE'];
+const EQUIPMENT_TYPES  = ['PC','CEL','MONITOR'];
+const ALL_ITEM_TYPES   = [...EQUIPMENT_TYPES, ...PERIPHERAL_TYPES];
+
+const RECAMBIO_VALID_TYPES = ['PC','CEL','MONITOR','VINCHA','CARGADOR','ADAPTADOR','HDMI','PARLANTE'];
+const PRESTAMO_VALID_TYPES = ['PC','CEL','MONITOR','VINCHA','CARGADOR','ADAPTADOR','HDMI','PARLANTE'];
+
+const ACTION_RULES = {
+    asignacion: {
+        label: 'Asignación',
+        reasons: {
+            normal: { label: 'Asignación', movs: ['egreso'], allowMulti: true, motivoLabel: 'Nuevo Ingreso', validItemTypes: ALL_ITEM_TYPES },
+            empleado_nuevo: { label: 'Empleado nuevo (alta)', movs: ['egreso'], allowMulti: true, motivoLabel: 'Nuevo Ingreso', validItemTypes: ['PC','CEL','MONITOR','KIT','VINCHA','CARGADOR'] },
+        },
+    },
+    recambio: {
+        label: 'Recambio',
+        reasons: {
+            beneficio:    { label: 'Beneficio (3 años)',  movs: ['egreso_wipe','egreso'],               motivoLabel: 'Recambio Tecnologico', validItemTypes: ['PC','CEL'] },
+            tecnologico:  { label: 'Recambio tecnológico',movs: ['egreso_wipe','egreso'],               motivoLabel: 'Recambio Tecnologico', validItemTypes: ['PC','CEL'] },
+            defectuoso:   { label: 'Defectuoso',          movs: ['egreso','ingreso'], peripheralMovs: ['egreso'], motivoLabel: 'Cambio por defectuoso', validItemTypes: RECAMBIO_VALID_TYPES },
+            garantia:     { label: 'Gestión de garantía', movs: ['egreso','ingreso'],                   motivoLabel: 'Gestión de garantía',  validItemTypes: ['PC','CEL','MONITOR'] },
+            robo_perdida: { label: 'Robo / pérdida',      movs: ['egreso'],                             motivoLabel: 'Robo / pérdida — viejo no ingresa', validItemTypes: ['PC','CEL'] },
+            sector:       { label: 'Sector completo',     movs: ['egreso','ingreso'], allowMulti: true, motivoLabel: 'Reemplazo de sector',  validItemTypes: ['PC','CEL','MONITOR'] },
+        },
+    },
+    prestamo: {
+        label: 'Préstamo',
+        reasons: {
+            normal: { label: 'Préstamo (devuelve mismo día 17hs)', movs: ['egreso'], devuelveHoy: '17:00', motivoLabel: 'Préstamo', validItemTypes: PRESTAMO_VALID_TYPES },
+        },
+    },
+    renuncia: {
+        label: 'Renuncia',
+        reasons: {
+            normal: { label: 'Ingreso a depósito por renuncia', movs: ['ingreso_wipe'], allowMulti: true, motivoLabel: 'Renuncia', validItemTypes: ['PC','CEL','MONITOR'] },
+            beneficio: { label: 'Renuncia con Beneficio (compra de equipo)', movs: ['egreso_wipe'], allowMulti: true, motivoLabel: 'Renuncia con Beneficio', validItemTypes: ['PC','CEL'] },
+        },
+    },
+    reemplazo: {
+        label: 'Reemplazo',
+        reasons: {
+            sector: { label: 'Reemplazo en sector', movs: ['egreso','ingreso'], allowMulti: true, motivoLabel: 'Reemplazo', validItemTypes: ['PC','CEL','MONITOR'] },
+        },
+    },
+};
+
+const LOGISTICS = {
+    presencial:     { label: 'Presencial',     subjectSuffix: '' },
+    correo_interno: { label: 'Correo interno', subjectSuffix: ' + Correo Interno' },
+};
+
+const EMAIL_DOMAIN_TO_COMPANY = {
+    'subsidiaria.com': 'Subsidiaria',
+    'texpert.com.ar': 'Texpert',
+    'empresa.com': 'Empresa Principal',
+    'newpay.com.ar':  'Newpay',
+};
+
+const EXTERNAL_EMAIL_PATTERNS = [
+    /^serv\.externos\./i,
+];
+
+const DEFAULT_OBS = {
+    'KIT/egreso/asignacion/normal':         'Se entrega Kit Inalámbrico nuevo al usuario para desempeñar sus labores.',
+    'KIT/egreso/recambio/defectuoso':       'Se entrega Kit Inalámbrico nuevo. Se recibe el kit defectuoso del usuario como condición para la entrega.',
+    'VINCHA/egreso/asignacion/normal':      'Se entrega la vincha al usuario para desarrollar sus labores.',
+    'VINCHA/egreso/recambio/defectuoso':    'Se entrega vincha nueva. Se recibe la vincha defectuosa del usuario como condición para la entrega.',
+    'VINCHA/egreso/prestamo/normal':        'Préstamo de vincha — devuelve el mismo día a las 17:00.',
+    'CARGADOR/egreso/asignacion/normal':    'Se entrega cargador nuevo al usuario para desempeñar sus labores.',
+    'CARGADOR/egreso/recambio/defectuoso':  'Se entrega cargador nuevo. Se recibe el cargador defectuoso del usuario; las pruebas confirman la falla.',
+    'CARGADOR/ingreso/recambio/defectuoso': 'Ingresa el cargador defectuoso del usuario.',
+    'CARGADOR/egreso/prestamo/normal':      'Préstamo de cargador — devuelve el mismo día a las 17:00.',
+    'ADAPTADOR/egreso/asignacion/normal':   'Se entrega adaptador al usuario para desempeñar sus labores.',
+    'ADAPTADOR/egreso/recambio/defectuoso': 'Se entrega adaptador nuevo. Se recibe el adaptador defectuoso del usuario como condición para la entrega.',
+    'HDMI/egreso/asignacion/normal':        'Se entrega cable HDMI al usuario para desempeñar sus labores.',
+    'HDMI/egreso/recambio/defectuoso':      'Se entrega cable HDMI nuevo. Se recibe el cable defectuoso del usuario como condición para la entrega.',
+    'PARLANTE/egreso/asignacion/normal':    'Se entrega parlante al usuario para desempeñar sus labores.',
+    'PARLANTE/egreso/recambio/defectuoso':  'Se entrega parlante nuevo. Se recibe el parlante defectuoso del usuario como condición para la entrega.',
+    'PARLANTE/egreso/prestamo/normal':      'Préstamo de parlante — devuelve el mismo día a las 17:00.',
+    'PC/egreso_wipe/recambio/beneficio':    'Beneficio. No ingresa al depósito, se decomisa en el día y se entrega al usuario.',
+    'PC/egreso/recambio/beneficio':         'Se entrega en su caja con cargador.',
+    'PC/egreso_wipe/recambio/tecnologico':  'Beneficio. No ingresa al depósito, se decomisa en el día y se entrega al usuario.',
+    'PC/egreso/recambio/tecnologico':       'Se entrega en su caja con cargador.',
+    'PC/egreso/asignacion/normal':          'Se entrega notebook nueva al usuario para desempeñar sus labores.',
+    'PC/ingreso_wipe/renuncia/normal':      'Ingresa al depósito wipeada por renuncia del usuario.',
+    'PC/egreso/recambio/defectuoso':        'Se entrega notebook nueva por equipo defectuoso del usuario.',
+    'PC/ingreso/recambio/defectuoso':       'Ingresa al depósito la notebook defectuosa del usuario.',
+    'PC/egreso/recambio/garantia':          'Se entrega notebook por gestión de garantía del fabricante.',
+    'PC/ingreso/recambio/garantia':         'Ingresa al depósito la notebook que va a garantía.',
+    'CEL/egreso_wipe/recambio/beneficio':   'Beneficio. El celular anterior queda en posesión del usuario.',
+    'CEL/egreso/recambio/beneficio':        'Se entrega celular nuevo al usuario por beneficio recambio tecnológico.',
+    'CEL/egreso/asignacion/normal':         'Se entrega celular nuevo al usuario para desempeñar sus labores.',
+    'CEL/egreso/recambio/robo_perdida':     'Reposición por pérdida o robo del celular anterior. El equipo viejo no ingresa al depósito.',
+    'CEL/ingreso_wipe/renuncia/normal':     'Ingresa al depósito wipeado por renuncia del usuario.',
+    'MONITOR/egreso/asignacion/normal':     'Se entrega monitor nuevo al usuario para desempeñar sus labores.',
+    'MONITOR/egreso/recambio/defectuoso':   'Se entrega monitor nuevo por falla del anterior.',
+    'MONITOR/ingreso/recambio/defectuoso':  'Ingresa al depósito monitor defectuoso del usuario.',
+    'MONITOR/egreso/recambio/garantia':     'Se entrega monitor por gestión de garantía.',
+    'MONITOR/ingreso/recambio/garantia':    'Ingresa al depósito el monitor que va a garantía.',
+    'MONITOR/ingreso_wipe/renuncia/normal': 'Ingresa al depósito monitor por renuncia del usuario.',
+};
+
+const DEFAULT_OBS_VALUES = new Set(Object.values(DEFAULT_OBS));
+const CORREO_INTERNO_SUFFIX = 'Se realiza el envío por correo interno ya que el usuario no puede acercarse a DT.';
+
+function renderObsTokens(text, item, spec) {
+    if (!text) return '';
+    const typeDef = item ? (ITEM_TYPES[item.type] || ITEM_TYPES.PC) : {};
+    const elementoTxt = typeDef.labelTipo || 'equipo';
+    const articuloTxt = typeDef.labelRetira || 'el equipo';
+    
+    const vals = {
+        fecha:             formatDateAR(item?.fechaMovimiento) || formatDateAR(getTodayString()),
+        elemento:          elementoTxt,
+        articulo_elemento: articuloTxt,
+        persona:           spec.personaRetira || '',
+        marca:             item?.marca || '',
+        modelo:            item?.modelo || '',
+        serie:             item?.serie || '',
+        ticket:            item?.ticket || spec.ticket || '',
+    };
+    return String(text).replace(/\{(fecha|elemento|articulo_elemento|persona|marca|modelo|serie|ticket)\}/g, (_, k) => vals[k] ?? '');
+}
+
+function checkObsDefault(item) {
+    if (item.isObsDirty !== undefined) {
+        return !item.isObsDirty;
+    }
+    return isDefaultObs(item.obs);
+}
+
+function defaultObsFor(type, mov, action, reason, logistics, item) {
+    let base = '';
+    const isEgreso = mov && mov.startsWith('egreso');
+    const isIngreso = mov && mov.startsWith('ingreso');
+
+    if (isEgreso && planillaSpec.obsEgresoOverride) {
+        base = planillaSpec.obsEgresoOverride;
+    } else if (isIngreso && planillaSpec.obsIngresoOverride) {
+        base = planillaSpec.obsIngresoOverride;
+    } else {
+        if (type && mov && action && reason) {
+            base = DEFAULT_OBS[`${type}/${mov}/${action}/${reason}`] || '';
+        }
+    }
+
+    if (base && item) {
+        base = renderObsTokens(base, item, planillaSpec);
+    } else if (base && !item) {
+        base = renderObsTokens(base, { type, mov }, planillaSpec);
+    }
+
+    if (logistics === 'correo_interno') {
+        const suffix = CORREO_INTERNO_SUFFIX;
+        return base ? `${base}\n${suffix}` : suffix;
+    }
+    return base;
+}
+
+function isDefaultObs(text) {
+    if (!text) return true;
+    if (DEFAULT_OBS_VALUES.has(text)) return true;
+    if (text === CORREO_INTERNO_SUFFIX) return true;
+    const tail = '\n' + CORREO_INTERNO_SUFFIX;
+    if (text.endsWith(tail)) {
+        const base = text.slice(0, -tail.length);
+        if (DEFAULT_OBS_VALUES.has(base)) return true;
+    }
+    return false;
+}
+
+// CODE 39 CLIENT SIDE ENGINE
+const CODE39 = {
+    '0': '000110100', '1': '100100001', '2': '001100001', '3': '101100000',
+    '4': '000110001', '5': '100110000', '6': '001110000', '7': '000100101',
+    '8': '100100100', '9': '001100100', 'A': '100001001', 'B': '001001001',
+    'C': '101001000', 'D': '000011001', 'E': '100011000', 'F': '001011000',
+    'G': '000001101', 'H': '100001100', 'I': '001001100', 'J': '000011100',
+    'K': '100000011', 'L': '001000011', 'M': '101000010', 'N': '000010011',
+    'O': '100010010', 'P': '001010010', 'Q': '000000111', 'R': '100000110',
+    'S': '001000110', 'T': '000010110', 'U': '110000001', 'V': '011000001',
+    'W': '111000000', 'X': '010010001', 'Y': '110010000', 'Z': '011010000',
+    '-': '010000101', '.': '110000100', ' ': '011000100', '*': '010010100',
+    '$': '010101000', '/': '010100010', '+': '010001010', '%': '000101010',
+};
+
+function generateBarcodeDataUri(text) {
+    if (!text) return '';
+    const cleanText = String(text).trim().toUpperCase().replace(/[^A-Z0-9\-.$/+% ]/g, '');
+    const clean = '*' + cleanText + '*';
+    if (clean.length <= 2) return '';
+
+    const narrow = 1;  // matching cases_routes.py narrow size
+    const wide = 2;    // matching cases_routes.py wide size
+    const height = 18; // matching cases_routes.py less grotesque height
+
+    let totalWidth = 0;
+    for (let i = 0; i < clean.length; i++) {
+        const char = clean[i];
+        const pattern = CODE39[char];
+        if (!pattern) continue;
+        for (let bit of pattern) {
+            totalWidth += bit === '1' ? wide : narrow;
+        }
+        if (i < clean.length - 1) {
+            totalWidth += narrow;
+        }
+    }
+
+    const canvas = document.createElement('canvas');
+    canvas.width = totalWidth;
+    canvas.height = height;
+    const ctx = canvas.getContext('2d');
+    ctx.fillStyle = '#FFFFFF';
+    ctx.fillRect(0, 0, totalWidth, height);
+    ctx.fillStyle = '#000000';
+
+    let x = 0;
+    for (let i = 0; i < clean.length; i++) {
+        const char = clean[i];
+        const pattern = CODE39[char];
+        if (!pattern) continue;
+        for (let j = 0; j < pattern.length; j++) {
+            const bit = pattern[j];
+            const w = bit === '1' ? wide : narrow;
+            if (j % 2 === 0) { // black bars are drawn on even indices
+                ctx.fillRect(x, 0, w, height);
+            }
+            x += w;
+        }
+        if (i < clean.length - 1) {
+            x += narrow;
+        }
+    }
+    return canvas.toDataURL('image/png');
+}
+
+function generateBarcodeHtml(text, dataUri) {
+    if (!text) return '';
+    const src = dataUri || generateBarcodeDataUri(text);
+    if (!src) return '';
+    return `<img src="${src}" height="18" style="display:inline-block;vertical-align:middle;border:none;" alt="${escapeHtml(text)}">`;
+}
+
+// ============================================================
+// STATE & WIZARD ENGINE
+// ============================================================
+let planillaSpec = {
+    action: 'asignacion',
+    reason: 'normal',
+    logistics: 'presencial',
+    ticket: '',
+    empresa: '',
+    tecnico: '',
+    personaRetira: '',
+    emailRetira: '',
+    saludoOverride: '',
+    obsEgresoOverride: '',
+    obsIngresoOverride: '',
+    items: []
+};
+
+// ============================================================
+// HELPERS
+// ============================================================
+function escapeHtml(text) {
+    if (!text) return '';
+    return String(text)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+}
+
+function formatDateAR(iso) {
+    if (!iso) return '';
+    const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(iso));
+    return m ? `${m[3]}/${m[2]}/${m[1]}` : iso;
+}
+
+function getTodayString() {
+    return new Date().toISOString().split('T')[0];
+}
+
+function inferEmpresaFromEmail(email) {
+    if (!email) return { empresa: '', isExternal: false };
+    const at = email.lastIndexOf('@');
+    if (at < 0) return { empresa: '', isExternal: false };
+    const domain = email.slice(at + 1).toLowerCase().trim();
+    if (!domain) return { empresa: '', isExternal: false };
+    if (domain.startsWith('serv.externos.empresa')) {
+        return { empresa: 'Externos Empresa Principal', isExternal: true };
+    }
+    if (domain.startsWith('serv.externos.subsidiaria')) {
+        return { empresa: 'Externos Subsidiaria', isExternal: true };
+    }
+    if (EXTERNAL_EMAIL_PATTERNS.some(re => re.test(domain))) {
+        return { empresa: '', isExternal: true };
+    }
+    return { empresa: EMAIL_DOMAIN_TO_COMPANY[domain] || '', isExternal: false };
+}
+
+function documentTitleFor(item, actionId, reasonId) {
+    const role = MOV_TYPES[item.mov]?.equipmentRole || 'new';
+    const baseMov = String(item.mov || '').replace(/_wipe$/, '');
+
+    if (actionId === 'recambio' && (reasonId === 'beneficio' || reasonId === 'tecnologico')) {
+        return role === 'old' ? 'EGRESA POR BENEFICIO' : 'EGRESA POR ASIGNACIÓN';
+    }
+    if (actionId === 'recambio' && reasonId === 'defectuoso') {
+        return role === 'old' ? 'INGRESA EQUIPO EN FALLA' : 'EGRESA EQUIPO PRÉSTAMO';
+    }
+    if (actionId === 'recambio' && reasonId === 'garantia') {
+        return role === 'old' ? 'INGRESA PARA GARANTÍA' : 'EGRESA EQUIPO PRÉSTAMO';
+    }
+    if (actionId === 'recambio' && reasonId === 'robo_perdida') return 'EGRESA POR ASIGNACIÓN';
+    if (actionId === 'recambio' && reasonId === 'sector') {
+        return baseMov === 'ingreso' ? 'INGRESA EQUIPO DE BAJA' : 'EGRESA POR REEMPLAZO';
+    }
+    if (actionId === 'reemplazo') {
+        return role === 'old' ? 'INGRESA EQUIPO POR REEMPLAZO' : 'EGRESA POR REEMPLAZO';
+    }
+    if (actionId === 'asignacion') return 'EGRESA POR ASIGNACIÓN';
+    if (actionId === 'prestamo') return 'EGRESA EQUIPO PRÉSTAMO';
+    if (actionId === 'renuncia') return 'INGRESA EQUIPO POR RENUNCIA';
+    return baseMov === 'ingreso' ? 'INGRESA' : 'EGRESA';
+}
+
+function saludoTokenValues(spec) {
+    const hour = new Date().getHours();
+    let greeting = 'Buen día';
+    if (hour >= 9 && hour < 12) greeting = 'Buenos días';
+    else if (hour >= 12 && hour < 18) greeting = 'Buenas tardes';
+    const firstItem = spec.items[0];
+    const firstTypeDef = firstItem ? (ITEM_TYPES[firstItem.type] || ITEM_TYPES.PC) : {};
+    const elementoTxt = (firstTypeDef.label || 'equipo').split(' / ')[0].toLowerCase();
+    const prefix = (elementoTxt.includes('vincha')) ? 'de la ' : 'del ';
+    return {
+        saludo:    greeting,
+        fecha:     formatDateAR(firstItem?.fechaMovimiento) || formatDateAR(getTodayString()),
+        elemento:  `${prefix}${elementoTxt}`,
+        persona:   spec.personaRetira || '',
+    };
+}
+
+function renderSaludoTokens(text, spec) {
+    const vals = saludoTokenValues(spec);
+    return String(text || '').replace(/\{(saludo|fecha|elemento|persona)\}/g, (_, k) => vals[k] ?? '');
+}
+
+function buildSaludoPlainAuto(spec) {
+    const defaults = {
+        asignacion: '{saludo}\n\nSaludos Rafael\n\nSe notifica que el día {fecha} se realizará la entrega {elemento} al usuario {persona}.\n\nDetalle {elemento}',
+        recambio: '{saludo}\n\nSaludos Rafael\n\nSe realiza el recambio del día {fecha} {elemento} de {persona}.',
+        prestamo: '{saludo}\n\nSaludos Rafael\n\nSe realiza el préstamo del día {fecha} {elemento} de {persona}.',
+        renuncia: '{saludo}\n\nSaludos Rafael\n\nSe recibe el {elemento} por renuncia de {persona} el día {fecha}.',
+        reemplazo: '{saludo}\n\nSaludos Rafael\n\nSe realiza el reemplazo de {elemento} de {persona} el día {fecha}.'
+    };
+    return defaults[spec.action] || defaults.asignacion;
+}
+
+function buildPlanillaSubject(spec) {
+    const labelOf = it => (ITEM_TYPES[it.type]?.label || it.type).split(' ')[0];
+    const uniq = [...new Set(spec.items.map(labelOf))];
+    const itemsSummary = uniq.join(' + ') || '—';
+    
+    const classification = itemsSummary;
+    const ticket = spec.ticket || 'SIN-TICKET';
+    const persona = spec.personaRetira || 'Usuario';
+    const suffix = LOGISTICS[spec.logistics]?.subjectSuffix || '';
+    
+    return `${ticket} | ${classification} | ${persona}${suffix}`.trim();
+}
+
+function buildPlanillaHtmlBody(spec, barcodeDataUri) {
+    const tableStyle = `width: 600px; border-collapse: collapse; font-family: Arial, sans-serif; font-size: 13px; color: #000;`;
+    const tdK = `border: 1px solid #a3a3a3; padding: 6px; width: 220px; font-weight: bold;`;
+    const tdV = `border: 1px solid #a3a3a3; padding: 6px; width: 380px;`;
+    const tdVTicket = `border: 1px solid #a3a3a3; padding: 6px; width: 380px; font-weight: bold;`;
+    const tdSig = `border: 1px solid #a3a3a3; padding: 15px 6px;`;
+    const titleStyle = `font-family: Arial, sans-serif; font-weight: bold; font-size: 14px; margin-bottom: 20px; color: #000;`;
+
+    const overrideTxt = (spec.saludoOverride || '').trim();
+    const effectiveTpl = overrideTxt || buildSaludoPlainAuto(spec);
+    const saludo = `
+        <div style="font-family: Arial, sans-serif; font-size: 13px; color: #000; margin-bottom: 20px; white-space: pre-wrap;">${escapeHtml(renderSaludoTokens(effectiveTpl, spec))}</div>
+    `;
+
+    const itemsHtml = spec.items.map((item, idx) => {
+        const typeDef = ITEM_TYPES[item.type] || ITEM_TYPES.PC;
+        const docTitle = documentTitleFor(item, spec.action, spec.reason);
+
+        const tipoLabel = (typeDef.label || '').split(' / ')[0];
+        const movLabel = (item.mov === 'ingreso' || item.mov === 'ingreso_wipe') ? 'Ingreso' : 'Egreso';
+        const tipoYMovimiento  = `${tipoLabel} - ${movLabel}`;
+
+        const marcaModelo = `${item.marca || ''} ${item.modelo || ''}`.trim();
+        const fechaAsig    = formatDateAR(item.fechaAsignacion);
+        const fechaMov = formatDateAR(item.fechaMovimiento || getTodayString());
+
+        const tecnicoAsignado = spec.tecnico || '';
+        const obsCelda     = item.obs || '';
+
+        const imeiRow = (item.type === 'CEL' && (item.imei1 || item.imei2))
+            ? `
+                <tr>
+                    <td style="${tdK}">IMEI's Del dispositivo móvil</td>
+                    <td style="${tdV}">
+                        ${item.imei1 ? `<div>${escapeHtml(item.imei1)}</div>` : ''}
+                        ${item.imei2 ? `<div>${escapeHtml(item.imei2)}</div>` : ''}
+                    </td>
+                </tr>`
+            : '';
+
+        return `
+            <div style="margin-bottom: 30px;">
+            <div style="${titleStyle}">${escapeHtml(docTitle)}</div>
+            <table style="${tableStyle}">
+                <tbody>
+                    <tr>
+                        <td style="${tdK}">Elemento y Tipo de Movimiento</td>
+                        <td style="${tdV}">${escapeHtml(tipoYMovimiento)}</td>
+                    </tr>
+                    <tr>
+                        <td style="${tdK}">Marca y Modelo del equipo</td>
+                        <td style="${tdV}">${escapeHtml(marcaModelo)}</td>
+                    </tr>
+                    <tr>
+                        <td style="${tdK}">Número de serie del equipo</td>
+                        <td style="${tdV}">${escapeHtml(item.serie || '')}</td>
+                    </tr>
+                    ${imeiRow}
+                    <tr>
+                        <td style="${tdK}">Fecha asignación</td>
+                        <td style="${tdV}">${escapeHtml(fechaAsig)}</td>
+                    </tr>
+                    <tr>
+                        <td style="${tdK}">Nro de Ticket</td>
+                        <td style="${tdVTicket}">${escapeHtml(item.ticket || spec.ticket || '')}</td>
+                    </tr>
+                    <tr>
+                        <td style="${tdK}">Cod Barra</td>
+                        <td style="${tdV}">${(item.ticket || spec.ticket) ? generateBarcodeHtml(item.ticket || spec.ticket, (item.ticket || spec.ticket) === spec.ticket ? barcodeDataUri : null) : ''}</td>
+                    </tr>
+                    <tr>
+                        <td style="${tdK}">Empresa Propietaria</td>
+                        <td style="${tdV}">${escapeHtml(spec.empresa || '')}</td>
+                    </tr>
+                    <tr>
+                        <td style="${tdK}">Fecha del movimiento</td>
+                        <td style="${tdV}">${escapeHtml(fechaMov)}</td>
+                    </tr>
+                    <tr>
+                        <td style="${tdK}">Técnico asignado</td>
+                        <td style="${tdV}">${escapeHtml(tecnicoAsignado)}</td>
+                    </tr>
+                    <tr>
+                        <td style="${tdK}">Quien recibe/entrega</td>
+                        <td style="${tdV}">${escapeHtml(spec.personaRetira || '')}</td>
+                    </tr>
+                    <tr>
+                        <td style="${tdK}">Email del usuario</td>
+                        <td style="${tdV}">${escapeHtml(spec.emailRetira || '')}</td>
+                    </tr>
+                    <tr>
+                        <td style="${tdK}">Estado general y observaciones</td>
+                        <td style="${tdV}">${escapeHtml(obsCelda)}</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            ${spec.action === 'prestamo' ? `
+            <div style="font-family: Arial, sans-serif; font-size: 13px; color: #000; margin-top: 20px;">
+                <div style="font-weight: bold; margin-bottom: 10px;">Datos a completar por el usuario</div>
+                <table style="${tableStyle}">
+                    <tbody>
+                        <tr>
+                            <td colspan="2" style="${tdSig} font-weight: bold; background: #f0f0f0; text-align: center;">Entrega</td>
+                        </tr>
+                        <tr>
+                            <td style="${tdSig} width: 220px; font-weight: bold;">Fecha:</td>
+                            <td style="${tdSig} width: 380px;"></td>
+                        </tr>
+                        <tr>
+                            <td style="${tdSig} font-weight: bold;">Firma:</td>
+                            <td style="${tdSig}"></td>
+                        </tr>
+                        <tr>
+                            <td style="${tdSig} font-weight: bold;">Aclaracion:</td>
+                            <td style="${tdSig}"></td>
+                        </tr>
+                        <tr>
+                            <td colspan="2" style="${tdSig} font-weight: bold; background: #f0f0f0; text-align: center;">Devolucion</td>
+                        </tr>
+                        <tr>
+                            <td style="${tdSig} font-weight: bold;">Fecha:</td>
+                            <td style="${tdSig}"></td>
+                        </tr>
+                        <tr>
+                            <td style="${tdSig} font-weight: bold;">Firma:</td>
+                            <td style="${tdSig}"></td>
+                        </tr>
+                        <tr>
+                            <td style="${tdSig} font-weight: bold;">Aclaracion:</td>
+                            <td style="${tdSig}"></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            ` : `
+            <div style="font-family: Arial, sans-serif; font-size: 13px; color: #000; margin-top: 20px;">
+                <div style="font-weight: bold; margin-bottom: 10px;">Datos a completar por el usuario</div>
+                <table style="${tableStyle}">
+                    <tbody>
+                        <tr>
+                            <td style="${tdSig} width: 220px; font-weight: bold;">Fecha de Entrega:</td>
+                            <td style="${tdSig} width: 380px;"></td>
+                        </tr>
+                        <tr>
+                            <td style="${tdSig} font-weight: bold;">Firma:</td>
+                            <td style="${tdSig}"></td>
+                        </tr>
+                        <tr>
+                            <td style="${tdSig} font-weight: bold;">Aclaracion:</td>
+                            <td style="${tdSig}"></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            `}
+            <br>
+            </div>
+        `;
+    }).join('');
+
+    const firmaGenerica = `
+        <div style="font-family: Arial, sans-serif; font-size: 13px; color: #000; margin-top: 2px;">
+            <span style="font-weight: bold;">${escapeHtml(spec.tecnico || '')}</span><br>
+            Soporte a Usuarios
+        </div>
+    `;
+
+    return `<div style="font-family: Arial, sans-serif; color: #000;">${saludo}${itemsHtml}${firmaGenerica}</div>`;
+}
+
+function makeEmptyItem(type, mov) {
+    const typeDef = ITEM_TYPES[type] || ITEM_TYPES.PC;
+    const item = {
+        type: type,
+        mov: mov,
+        marca: typeDef.defaultMarca || '',
+        modelo: typeDef.defaultModelo || '',
+        serie: '',
+        imei1: '',
+        imei2: '',
+        ticket: planillaSpec.ticket || '',
+        fechaAsignacion: getTodayString(),
+        fechaMovimiento: getTodayString(),
+        isObsDirty: false
+    };
+    item.obs = defaultObsFor(type, mov, planillaSpec.action, planillaSpec.reason, planillaSpec.logistics, item);
+    return item;
+}
+
+// ============================================================
+// CORE CONTROLLER & STATE UPDATES
+// ============================================================
+function updatePreview() {
+    const subject = buildPlanillaSubject(planillaSpec);
+    document.getElementById('previewSubject').textContent = subject;
+
+    const barcodeDataUri = planillaSpec.ticket ? generateBarcodeDataUri(planillaSpec.ticket) : '';
+    const bodyHtml = buildPlanillaHtmlBody(planillaSpec, barcodeDataUri);
+    document.getElementById('previewHtmlBody').innerHTML = bodyHtml;
+}
+
+function autosaveState() {
+    localStorage.setItem('planilla_spec_manual', JSON.stringify(planillaSpec));
+}
+
+function loadState() {
+    const saved = localStorage.getItem('planilla_spec_manual');
+    if (saved) {
+        try {
+            planillaSpec = JSON.parse(saved);
+        } catch (e) {
+            console.error("Error reading saved state", e);
+        }
+    }
+}
+
+function initializeFormElements() {
+    // Populate Actions
+    const actionSelect = document.getElementById('planAction');
+    actionSelect.innerHTML = Object.entries(ACTION_RULES)
+        .map(([k, v]) => `<option value="${k}">${v.label}</option>`).join('');
+    actionSelect.value = planillaSpec.action;
+
+    // Populate Reasons
+    populateReasonDropdown();
+    
+    // Bind global values
+    document.getElementById('planLogistics').value = planillaSpec.logistics;
+    document.getElementById('planTicket').value = planillaSpec.ticket;
+    document.getElementById('planEmpresa').value = planillaSpec.empresa;
+    document.getElementById('planTecnico').value = planillaSpec.tecnico || localStorage.getItem('tecnico_manual_pref') || '';
+    document.getElementById('planPersonaRetira').value = planillaSpec.personaRetira;
+    document.getElementById('planEmailRetira').value = planillaSpec.emailRetira;
+    document.getElementById('planSaludo').value = planillaSpec.saludoOverride;
+    document.getElementById('planObsEgreso').value = planillaSpec.obsEgresoOverride || '';
+    document.getElementById('planObsIngreso').value = planillaSpec.obsIngresoOverride || '';
+
+    const { isExternal } = inferEmpresaFromEmail(planillaSpec.emailRetira || '');
+    const btnAgregar = document.getElementById('btnAgregarConsultora');
+    if (btnAgregar) {
+        btnAgregar.style.display = isExternal ? 'inline-block' : 'none';
+    }
+
+    if (planillaSpec.saludoOverride) {
+        document.getElementById('saludoEditorWrap').style.display = 'flex';
+        document.getElementById('btnToggleSaludoEditor').textContent = 'Ocultar Editor';
+    }
+
+    if (planillaSpec.obsEgresoOverride || planillaSpec.obsIngresoOverride) {
+        document.getElementById('obsEditorWrap').style.display = 'flex';
+        document.getElementById('btnToggleObsEditor').textContent = 'Ocultar Editor';
+    } else {
+        document.getElementById('obsEditorWrap').style.display = 'none';
+        document.getElementById('btnToggleObsEditor').textContent = 'Personalizar Observaciones';
+    }
+
+    renderItemsList();
+    updatePreview();
+    lucide.createIcons();
+}
+
+function populateReasonDropdown() {
+    const action = document.getElementById('planAction').value;
+    const reasonSelect = document.getElementById('planReason');
+    const reasons = ACTION_RULES[action]?.reasons || {};
+    reasonSelect.innerHTML = Object.entries(reasons)
+        .map(([k, v]) => `<option value="${k}">${v.label}</option>`).join('');
+    reasonSelect.value = planillaSpec.reason;
+}
+
+function renderItemsList() {
+    const container = document.getElementById('itemsContainer');
+    container.innerHTML = '';
+    const errorList = document.getElementById('error-itemsList');
+    errorList.style.display = 'none';
+
+    if (planillaSpec.items.length === 0) {
+        container.innerHTML = `<div style="text-align: center; color: var(--text-faint); padding: 20px 0; font-size: 0.9rem;">No hay ítems agregados. Hacé clic en "Agregar ítem" para comenzar.</div>`;
+        return;
+    }
+
+    planillaSpec.items.forEach((item, index) => {
+        const typeDef = ITEM_TYPES[item.type] || ITEM_TYPES.PC;
+        const hasImeis = item.type === 'CEL';
+
+        const card = document.createElement('div');
+        card.className = 'item-card';
+        card.dataset.index = index;
+
+        // Types and movs selects
+        const typeOptions = Object.entries(ITEM_TYPES)
+            .map(([k, v]) => `<option value="${k}" ${item.type === k ? 'selected' : ''}>${v.label}</option>`).join('');
+        
+        // Allowed movs based on rule
+        const rule = ACTION_RULES[planillaSpec.action]?.reasons[planillaSpec.reason];
+        const allowedMovs = rule?.movs || ['egreso'];
+        const movOptions = Object.entries(MOV_TYPES)
+            .filter(([k]) => allowedMovs.includes(k) || k === 'ingreso' || k === 'egreso') // Allow fallbacks
+            .map(([k, v]) => `<option value="${k}" ${item.mov === k ? 'selected' : ''}>${v.label}</option>`).join('');
+
+        card.innerHTML = `
+            <div class="item-card-header">
+                <span class="item-card-title">Ítem #${index + 1}: ${typeDef.label}</span>
+                <button type="button" class="item-remove" onclick="removeItem(${index})" title="Quitar ítem">
+                    <i data-lucide="trash-2" style="width: 16px; height: 16px;"></i>
+                </button>
+            </div>
+            <div class="field-grid" style="grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));">
+                <div class="field">
+                    <label>Tipo Elemento</label>
+                    <select class="item-field" data-prop="type" onchange="updateItemType(${index}, this.value)">
+                        ${typeOptions}
+                    </select>
+                </div>
+                <div class="field">
+                    <label>Movimiento</label>
+                    <select class="item-field" data-prop="mov" onchange="updateItemMov(${index}, this.value)">
+                        ${movOptions}
+                    </select>
+                </div>
+                <div class="field">
+                    <label>Número de Ticket</label>
+                    <input type="text" class="item-field" data-prop="ticket" value="${escapeHtml(item.ticket || '')}" placeholder="Ticket / Incidente" oninput="updateItemField(${index}, 'ticket', this.value)">
+                </div>
+                <div class="field">
+                    <label>Marca</label>
+                    <input type="text" class="item-field" data-prop="marca" value="${escapeHtml(item.marca)}" list="dlMarcas" oninput="updateItemField(${index}, 'marca', this.value)">
+                </div>
+                <div class="field">
+                    <label>Modelo</label>
+                    <input type="text" class="item-field" data-prop="modelo" value="${escapeHtml(item.modelo)}" oninput="updateItemField(${index}, 'modelo', this.value)">
+                </div>
+                <div class="field">
+                    <label>Número de Serie</label>
+                    <input type="text" class="item-field" data-prop="serie" value="${escapeHtml(item.serie)}" placeholder="S/N" oninput="updateItemField(${index}, 'serie', this.value)">
+                </div>
+                
+                ${hasImeis ? `
+                <div class="field">
+                    <label>IMEI 1</label>
+                    <input type="text" class="item-field" data-prop="imei1" value="${escapeHtml(item.imei1)}" placeholder="IMEI 1" oninput="updateItemField(${index}, 'imei1', this.value)">
+                </div>
+                <div class="field">
+                    <label>IMEI 2</label>
+                    <input type="text" class="item-field" data-prop="imei2" value="${escapeHtml(item.imei2)}" placeholder="IMEI 2" oninput="updateItemField(${index}, 'imei2', this.value)">
+                </div>
+                ` : ''}
+
+                <div class="field">
+                    <label>Fecha Movimiento</label>
+                    <input type="date" class="item-field" data-prop="fechaMovimiento" value="${item.fechaMovimiento}" onchange="updateItemField(${index}, 'fechaMovimiento', this.value)">
+                </div>
+
+                <div class="field">
+                    <label>Fecha Asignación</label>
+                    <input type="date" class="item-field" data-prop="fechaAsignacion" value="${item.fechaAsignacion}" onchange="updateItemField(${index}, 'fechaAsignacion', this.value)">
+                </div>
+
+                <div class="field field-full">
+                    <div style="display:flex; justify-content:space-between; align-items:center;">
+                        <label>Observaciones</label>
+                        <button type="button" class="btn btn-ghost" style="padding: 2px 4px; font-size: 10px; height:auto; min-height:0;" onclick="resetItemObs(${index})">Recargar Obs por Defecto</button>
+                    </div>
+                    <textarea class="item-field" data-prop="obs" rows="2" oninput="updateItemField(${index}, 'obs', this.value)">${escapeHtml(item.obs)}</textarea>
+                </div>
+            </div>
+        `;
+        container.appendChild(card);
+    });
+    lucide.createIcons();
+}
+
+// ============================================================
+// INTERACTIVE FUNCTIONS
+// ============================================================
+window.removeItem = function(index) {
+    planillaSpec.items.splice(index, 1);
+    renderItemsList();
+    updatePreview();
+    autosaveState();
+};
+
+window.updateItemType = function(index, type) {
+    const item = planillaSpec.items[index];
+    item.type = type;
+    
+    // Fill default values if any
+    const typeDef = ITEM_TYPES[type] || ITEM_TYPES.PC;
+    item.marca = typeDef.defaultMarca || '';
+    item.modelo = typeDef.defaultModelo || '';
+    
+    // Recalculate observations if default
+    if (checkObsDefault(item)) {
+        item.obs = defaultObsFor(item.type, item.mov, planillaSpec.action, planillaSpec.reason, planillaSpec.logistics, item);
+    }
+    
+    renderItemsList();
+    updatePreview();
+    autosaveState();
+};
+
+window.updateItemMov = function(index, mov) {
+    const item = planillaSpec.items[index];
+    item.mov = mov;
+    
+    // Recalculate observations if default
+    if (checkObsDefault(item)) {
+        item.obs = defaultObsFor(item.type, item.mov, planillaSpec.action, planillaSpec.reason, planillaSpec.logistics, item);
+    }
+    
+    renderItemsList();
+    updatePreview();
+    autosaveState();
+};
+
+window.updateItemField = function(index, field, value) {
+    planillaSpec.items[index][field] = value;
+    if (field === 'obs') {
+        planillaSpec.items[index].isObsDirty = true;
+    }
+    
+    if (['type', 'mov', 'marca', 'modelo', 'serie', 'ticket', 'fechaMovimiento'].includes(field)) {
+        const item = planillaSpec.items[index];
+        if (checkObsDefault(item)) {
+            item.obs = defaultObsFor(item.type, item.mov, planillaSpec.action, planillaSpec.reason, planillaSpec.logistics, item);
+            const obsTextarea = document.querySelector(`.item-card[data-index="${index}"] textarea[data-prop="obs"]`);
+            if (obsTextarea) {
+                obsTextarea.value = item.obs;
+            }
+        }
+    }
+    updatePreview();
+    autosaveState();
+};
+
+window.resetItemObs = function(index) {
+    const item = planillaSpec.items[index];
+    item.isObsDirty = false;
+    item.obs = defaultObsFor(item.type, item.mov, planillaSpec.action, planillaSpec.reason, planillaSpec.logistics, item);
+    renderItemsList();
+    updatePreview();
+    autosaveState();
+};
+
+// Global Event Listeners
+document.getElementById('planAction').addEventListener('change', (e) => {
+    planillaSpec.action = e.target.value;
+    populateReasonDropdown();
+    planillaSpec.reason = document.getElementById('planReason').value;
+    
+    if (planillaSpec.items.length > 0) {
+        planillaSpec.items.forEach(it => {
+            if (checkObsDefault(it)) {
+                it.obs = defaultObsFor(it.type, it.mov, planillaSpec.action, planillaSpec.reason, planillaSpec.logistics, it);
+            }
+        });
+    }
+    
+    renderItemsList();
+    updatePreview();
+    autosaveState();
+});
+
+document.getElementById('planReason').addEventListener('change', (e) => {
+    planillaSpec.reason = e.target.value;
+    
+    if (planillaSpec.items.length > 0) {
+        planillaSpec.items.forEach(it => {
+            if (checkObsDefault(it)) {
+                it.obs = defaultObsFor(it.type, it.mov, planillaSpec.action, planillaSpec.reason, planillaSpec.logistics, it);
+            }
+        });
+    }
+    
+    renderItemsList();
+    updatePreview();
+    autosaveState();
+});
+
+document.getElementById('planLogistics').addEventListener('change', (e) => {
+    planillaSpec.logistics = e.target.value;
+    
+    if (planillaSpec.items.length > 0) {
+        planillaSpec.items.forEach(it => {
+            if (checkObsDefault(it)) {
+                it.obs = defaultObsFor(it.type, it.mov, planillaSpec.action, planillaSpec.reason, planillaSpec.logistics, it);
+            }
+        });
+    }
+    
+    renderItemsList();
+    updatePreview();
+    autosaveState();
+});
+
+document.getElementById('planTicket').addEventListener('input', (e) => {
+    document.getElementById('error-planTicket').textContent = '';
+    document.getElementById('planTicket').classList.remove('is-invalid');
+    const oldTicket = planillaSpec.ticket;
+    const newTicket = e.target.value;
+    planillaSpec.ticket = newTicket;
+    
+    if (planillaSpec.items) {
+        planillaSpec.items.forEach((item, index) => {
+            if (item.ticket === oldTicket || !item.ticket) {
+                item.ticket = newTicket;
+                const itemInputs = document.querySelectorAll(`.item-card[data-index="${index}"] input[data-prop="ticket"]`);
+                itemInputs.forEach(input => {
+                    input.value = newTicket;
+                });
+                
+                if (checkObsDefault(item)) {
+                    item.obs = defaultObsFor(item.type, item.mov, planillaSpec.action, planillaSpec.reason, planillaSpec.logistics, item);
+                    const obsTextarea = document.querySelector(`.item-card[data-index="${index}"] textarea[data-prop="obs"]`);
+                    if (obsTextarea) {
+                        obsTextarea.value = item.obs;
+                    }
+                }
+            }
+        });
+    }
+    
+    updatePreview();
+    autosaveState();
+});
+
+document.getElementById('planEmpresa').addEventListener('input', (e) => {
+    planillaSpec.empresa = e.target.value;
+    updatePreview();
+    autosaveState();
+});
+
+document.getElementById('planTecnico').addEventListener('input', (e) => {
+    planillaSpec.tecnico = e.target.value;
+    localStorage.setItem('tecnico_manual_pref', e.target.value);
+    updatePreview();
+    autosaveState();
+});
+
+document.getElementById('planPersonaRetira').addEventListener('input', (e) => {
+    planillaSpec.personaRetira = e.target.value;
+    document.getElementById('error-planPersonaRetira').textContent = '';
+    document.getElementById('planPersonaRetira').classList.remove('is-invalid');
+    
+    if (planillaSpec.items) {
+        planillaSpec.items.forEach((item, index) => {
+            if (checkObsDefault(item)) {
+                item.obs = defaultObsFor(item.type, item.mov, planillaSpec.action, planillaSpec.reason, planillaSpec.logistics, item);
+                const obsTextarea = document.querySelector(`.item-card[data-index="${index}"] textarea[data-prop="obs"]`);
+                if (obsTextarea) {
+                    obsTextarea.value = item.obs;
+                }
+            }
+        });
+    }
+    
+    updatePreview();
+    autosaveState();
+});
+
+document.getElementById('planEmailRetira').addEventListener('input', (e) => {
+    const val = e.target.value;
+    planillaSpec.emailRetira = val;
+    
+    // Try to auto-derive company from email domain
+    const derived = inferEmpresaFromEmail(val);
+    if (derived.empresa) {
+        planillaSpec.empresa = derived.empresa;
+        document.getElementById('planEmpresa').value = derived.empresa;
+    }
+    
+    const warningEl = document.getElementById('externalUserWarning');
+    if (warningEl) warningEl.style.display = 'none';
+    
+    const btnAgregar = document.getElementById('btnAgregarConsultora');
+    if (btnAgregar) {
+        btnAgregar.style.display = derived.isExternal ? 'inline-block' : 'none';
+    }
+    
+    updatePreview();
+    autosaveState();
+});
+
+document.getElementById('btnAgregarConsultora')?.addEventListener('click', () => {
+    Swal.fire({
+        title: 'Nombre de la Consultora',
+        input: 'text',
+        inputPlaceholder: 'Ej: Accenture, Globant, etc.',
+        showCancelButton: true,
+        confirmButtonText: 'Guardar',
+        cancelButtonText: 'Cancelar',
+        confirmButtonColor: 'var(--primary)',
+    }).then((result) => {
+        if (result.isConfirmed && result.value) {
+            const consultora = result.value.trim();
+            let baseEmpresa = 'Externos Empresa Principal';
+            const emailVal = (document.getElementById('planEmailRetira')?.value || '').toLowerCase();
+            if (emailVal.includes('subsidiaria')) {
+                baseEmpresa = 'Externos Subsidiaria';
+            } else if (planillaSpec.empresa && planillaSpec.empresa.startsWith('Externos')) {
+                baseEmpresa = planillaSpec.empresa.split(' (')[0];
+            }
+            
+            const finalEmpresa = `${baseEmpresa} (${consultora})`;
+            planillaSpec.empresa = finalEmpresa;
+            const input = document.getElementById('planEmpresa');
+            if (input) {
+                input.value = finalEmpresa;
+            }
+            updatePreview();
+            autosaveState();
+        }
+    });
+});
+
+document.getElementById('planSaludo').addEventListener('input', (e) => {
+    planillaSpec.saludoOverride = e.target.value;
+    updatePreview();
+    autosaveState();
+});
+
+document.getElementById('btnToggleSaludoEditor').addEventListener('click', () => {
+    const wrap = document.getElementById('saludoEditorWrap');
+    const isVisible = wrap.style.display === 'flex' || wrap.style.display === 'block';
+    
+    if (isVisible) {
+        wrap.style.display = 'none';
+        document.getElementById('btnToggleSaludoEditor').textContent = 'Personalizar Saludo';
+    } else {
+        wrap.style.display = 'flex';
+        document.getElementById('btnToggleSaludoEditor').textContent = 'Ocultar Editor';
+        // Prefill default template if empty
+        if (!planillaSpec.saludoOverride) {
+            const auto = buildSaludoPlainAuto(planillaSpec);
+            planillaSpec.saludoOverride = auto;
+            document.getElementById('planSaludo').value = auto;
+            updatePreview();
+            autosaveState();
+        }
+    }
+});
+
+document.getElementById('btnLoadDefaultSaludo').addEventListener('click', () => {
+    const auto = buildSaludoPlainAuto(planillaSpec);
+    planillaSpec.saludoOverride = auto;
+    document.getElementById('planSaludo').value = auto;
+    updatePreview();
+    autosaveState();
+});
+
+document.getElementById('btnResetSaludo').addEventListener('click', () => {
+    planillaSpec.saludoOverride = '';
+    document.getElementById('planSaludo').value = '';
+    updatePreview();
+    autosaveState();
+});
+
+document.getElementById('planObsEgreso').addEventListener('input', (e) => {
+    planillaSpec.obsEgresoOverride = e.target.value;
+    if (planillaSpec.items) {
+        planillaSpec.items.forEach((item, index) => {
+            if (item.mov.startsWith('egreso') && checkObsDefault(item)) {
+                item.obs = defaultObsFor(item.type, item.mov, planillaSpec.action, planillaSpec.reason, planillaSpec.logistics, item);
+                const obsTextarea = document.querySelector(`.item-card[data-index="${index}"] textarea[data-prop="obs"]`);
+                if (obsTextarea) obsTextarea.value = item.obs;
+            }
+        });
+    }
+    updatePreview();
+    autosaveState();
+});
+
+document.getElementById('planObsIngreso').addEventListener('input', (e) => {
+    planillaSpec.obsIngresoOverride = e.target.value;
+    if (planillaSpec.items) {
+        planillaSpec.items.forEach((item, index) => {
+            if (item.mov.startsWith('ingreso') && checkObsDefault(item)) {
+                item.obs = defaultObsFor(item.type, item.mov, planillaSpec.action, planillaSpec.reason, planillaSpec.logistics, item);
+                const obsTextarea = document.querySelector(`.item-card[data-index="${index}"] textarea[data-prop="obs"]`);
+                if (obsTextarea) obsTextarea.value = item.obs;
+            }
+        });
+    }
+    updatePreview();
+    autosaveState();
+});
+
+document.getElementById('btnToggleObsEditor').addEventListener('click', () => {
+    const wrap = document.getElementById('obsEditorWrap');
+    const isVisible = wrap.style.display === 'flex' || wrap.style.display === 'block';
+    
+    if (isVisible) {
+        wrap.style.display = 'none';
+        document.getElementById('btnToggleObsEditor').textContent = 'Personalizar Observaciones';
+    } else {
+        wrap.style.display = 'flex';
+        document.getElementById('btnToggleObsEditor').textContent = 'Ocultar Editor';
+    }
+});
+
+document.getElementById('btnLoadDefaultObsEgreso').addEventListener('click', () => {
+    const template = 'Se entrega {elemento} {marca} {modelo} (S/N: {serie})';
+    planillaSpec.obsEgresoOverride = template;
+    document.getElementById('planObsEgreso').value = template;
+    if (planillaSpec.items) {
+        planillaSpec.items.forEach((item, index) => {
+            if (item.mov.startsWith('egreso') && checkObsDefault(item)) {
+                item.obs = defaultObsFor(item.type, item.mov, planillaSpec.action, planillaSpec.reason, planillaSpec.logistics, item);
+                const obsTextarea = document.querySelector(`.item-card[data-index="${index}"] textarea[data-prop="obs"]`);
+                if (obsTextarea) obsTextarea.value = item.obs;
+            }
+        });
+    }
+    updatePreview();
+    autosaveState();
+});
+
+document.getElementById('btnLoadDefaultObsIngreso').addEventListener('click', () => {
+    const template = 'Ingresa al depósito {elemento} {marca} {modelo} (S/N: {serie})';
+    planillaSpec.obsIngresoOverride = template;
+    document.getElementById('planObsIngreso').value = template;
+    if (planillaSpec.items) {
+        planillaSpec.items.forEach((item, index) => {
+            if (item.mov.startsWith('ingreso') && checkObsDefault(item)) {
+                item.obs = defaultObsFor(item.type, item.mov, planillaSpec.action, planillaSpec.reason, planillaSpec.logistics, item);
+                const obsTextarea = document.querySelector(`.item-card[data-index="${index}"] textarea[data-prop="obs"]`);
+                if (obsTextarea) obsTextarea.value = item.obs;
+            }
+        });
+    }
+    updatePreview();
+    autosaveState();
+});
+
+document.getElementById('btnResetObs').addEventListener('click', () => {
+    planillaSpec.obsEgresoOverride = '';
+    planillaSpec.obsIngresoOverride = '';
+    document.getElementById('planObsEgreso').value = '';
+    document.getElementById('planObsIngreso').value = '';
+    if (planillaSpec.items) {
+        planillaSpec.items.forEach((item, index) => {
+            if (checkObsDefault(item)) {
+                item.obs = defaultObsFor(item.type, item.mov, planillaSpec.action, planillaSpec.reason, planillaSpec.logistics, item);
+                const obsTextarea = document.querySelector(`.item-card[data-index="${index}"] textarea[data-prop="obs"]`);
+                if (obsTextarea) obsTextarea.value = item.obs;
+            }
+        });
+    }
+    updatePreview();
+    autosaveState();
+});
+
+document.getElementById('btnAddItem').addEventListener('click', () => {
+    // Determine default type based on action rules or fallback to PC
+    const action = ACTION_RULES[planillaSpec.action];
+    const rule = action?.reasons[planillaSpec.reason];
+    const type = rule?.validItemTypes[0] || 'PC';
+    const mov = rule?.movs[0] || 'egreso';
+    
+    const motherTicket = (planillaSpec.ticket || '').trim();
+    
+    if (motherTicket) {
+        Swal.fire({
+            title: '¿Mismo número de ticket?',
+            text: `¿Este ítem pertenece al mismo nro de ticket (${motherTicket})?`,
+            icon: 'question',
+            showCancelButton: true,
+            showDenyButton: true,
+            confirmButtonText: 'Sí',
+            denyButtonText: 'No (Ingresar nuevo)',
+            cancelButtonText: 'Cancelar',
+            confirmButtonColor: 'var(--primary)',
+            denyButtonColor: 'var(--accent)'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                const newItem = makeEmptyItem(type, mov);
+                newItem.ticket = motherTicket;
+                planillaSpec.items.push(newItem);
+                renderItemsList();
+                updatePreview();
+                autosaveState();
+            } else if (result.isDenied) {
+                Swal.fire({
+                    title: 'Nuevo número de ticket/incidente',
+                    input: 'text',
+                    inputPlaceholder: 'INC00000XXXXXXXX o WO00000XXXXXXX',
+                    showCancelButton: true,
+                    confirmButtonText: 'Aceptar',
+                    cancelButtonText: 'Cancelar',
+                    confirmButtonColor: 'var(--primary)',
+                    inputValidator: (value) => {
+                        if (!value || !value.trim()) {
+                            return 'Debés ingresar un número de ticket';
+                        }
+                    }
+                }).then((inputResult) => {
+                    if (inputResult.isConfirmed) {
+                        const newItem = makeEmptyItem(type, mov);
+                        newItem.ticket = inputResult.value.trim();
+                        planillaSpec.items.push(newItem);
+                        renderItemsList();
+                        updatePreview();
+                        autosaveState();
+                    }
+                });
+            }
+        });
+    } else {
+        Swal.fire({
+            title: 'Ingresar número de ticket/incidente',
+            input: 'text',
+            inputPlaceholder: 'INC00000XXXXXXXX o WO00000XXXXXXX',
+            showCancelButton: true,
+            confirmButtonText: 'Aceptar',
+            cancelButtonText: 'Cancelar (dejar vacío)',
+            confirmButtonColor: 'var(--primary)',
+        }).then((inputResult) => {
+            if (inputResult.isDismissed && inputResult.dismiss === Swal.DismissReason.backdrop) {
+                return;
+            }
+            const newItem = makeEmptyItem(type, mov);
+            if (inputResult.isConfirmed && inputResult.value) {
+                newItem.ticket = inputResult.value.trim();
+            } else {
+                newItem.ticket = '';
+            }
+            planillaSpec.items.push(newItem);
+            renderItemsList();
+            updatePreview();
+            autosaveState();
+        });
+    }
+});
+
+// Clear All
+document.getElementById('btnClearAll').addEventListener('click', () => {
+    Swal.fire({
+        title: '¿Confirmás limpiar todo?',
+        text: 'Se vaciarán todos los ítems y campos del formulario.',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: 'var(--primary)',
+        cancelButtonColor: 'var(--text-muted)',
+        confirmButtonText: 'Sí, limpiar',
+        cancelButtonText: 'Cancelar'
+    }).then((result) => {
+        if (result.isConfirmed) {
+            planillaSpec = {
+                action: 'asignacion',
+                reason: 'normal',
+                logistics: 'presencial',
+                ticket: '',
+                empresa: '',
+                tecnico: localStorage.getItem('tecnico_manual_pref') || '',
+                personaRetira: '',
+                emailRetira: '',
+                saludoOverride: '',
+                obsEgresoOverride: '',
+                obsIngresoOverride: '',
+                items: []
+            };
+            
+            initializeFormElements();
+            autosaveState();
+            Swal.fire('Formulario Limpio', '', 'success');
+        }
+    });
+});
+
+// ============================================================
+// THEME SWITCHER
+// ============================================================
+const themeBtn = document.getElementById('themeToggle');
+themeBtn.addEventListener('click', () => {
+    const current = document.documentElement.getAttribute('data-theme');
+    const target = current === 'dark' ? 'light' : 'dark';
+    document.documentElement.setAttribute('data-theme', target);
+    localStorage.setItem('theme', target);
+    
+    // update icon
+    themeBtn.innerHTML = target === 'dark' ? '<i data-lucide="moon"></i>' : '<i data-lucide="sun"></i>';
+    lucide.createIcons();
+});
+
+// Load saved theme
+const savedTheme = localStorage.getItem('theme') || 'light';
+document.documentElement.setAttribute('data-theme', savedTheme);
+themeBtn.innerHTML = savedTheme === 'dark' ? '<i data-lucide="moon"></i>' : '<i data-lucide="sun"></i>';
+
+// ============================================================
+// ACTIONS & OUTLOOK EXPORTS
+// ============================================================
+function validateForm() {
+    const errors = [];
+    const isPrestamo = planillaSpec.action === 'prestamo';
+    const isCorreoInterno = planillaSpec.logistics === 'correo_interno';
+    
+    if (!planillaSpec.ticket && !isPrestamo) {
+        errors.push({ id: 'planTicket', msg: 'El número de incidente/ticket es obligatorio.' });
+    }
+    
+    if (!planillaSpec.personaRetira && !isCorreoInterno) {
+        errors.push({ id: 'planPersonaRetira', msg: 'El nombre de quien retira es obligatorio.' });
+    }
+    
+    if (planillaSpec.items.length === 0) {
+        errors.push({ id: 'itemsList', msg: 'Debes agregar al menos un ítem al movimiento.' });
+    }
+    
+    // Clear previous errors
+    document.querySelectorAll('.is-invalid').forEach(el => el.classList.remove('is-invalid'));
+    document.querySelectorAll('.field-error').forEach(el => el.textContent = '');
+    
+    if (errors.length > 0) {
+        errors.forEach(err => {
+            const field = document.getElementById(err.id);
+            if (field) field.classList.add('is-invalid');
+            const slot = document.getElementById(`error-${err.id}`);
+            if (slot) {
+                slot.textContent = err.msg;
+                slot.style.display = 'block';
+            }
+        });
+        
+        Swal.fire({
+            title: 'Campos incompletos',
+            text: 'Revisá los errores antes de exportar el template.',
+            icon: 'error',
+            confirmButtonColor: 'var(--primary)'
+        });
+        return false;
+    }
+    return true;
+}
+
+// Copy Subject
+document.getElementById('btnCopySubject').addEventListener('click', () => {
+    const subject = buildPlanillaSubject(planillaSpec);
+    navigator.clipboard.writeText(subject).then(() => {
+        Swal.fire({
+            icon: 'success',
+            title: 'Asunto Copiado',
+            text: subject,
+            timer: 1500,
+            showConfirmButton: false
+        });
+    });
+});
+
+
+// Send via Outlook desktop app protocol
+document.getElementById('btnSendOutlook').addEventListener('click', () => {
+    if (!validateForm()) return;
+    
+    const to = "rerodriguez@texpert.com.ar";
+    const ccList = "tecnologiausuariosdt@texpert.com.ar";
+    const subject = buildPlanillaSubject(planillaSpec);
+    
+    const barcodeDataUri = planillaSpec.ticket ? generateBarcodeDataUri(planillaSpec.ticket) : '';
+    const bodyHtml = buildPlanillaHtmlBody(planillaSpec, barcodeDataUri);
+    const fullHtml = `<html><body style="font-family: Arial, sans-serif;">${bodyHtml}</body></html>`;
+    
+    const payload = { To: to, Cc: ccList, Subject: subject, Body: fullHtml };
+    const base64Str = btoa(unescape(encodeURIComponent(JSON.stringify(payload))));
+    
+    const frame = document.createElement('iframe');
+    frame.style.display = 'none';
+    frame.src = `templategen://${base64Str}`;
+    document.body.appendChild(frame);
+    setTimeout(() => {
+        frame.remove();
+        Swal.fire({
+            icon: 'success',
+            title: 'Enviado a Outlook',
+            text: 'Se abrió la aplicación Outlook en tu escritorio.',
+            timer: 2000,
+            showConfirmButton: false
+        });
+    }, 1500);
+});
+
+
+// ============================================================
+// INITIALIZATION
+// ============================================================
+document.addEventListener('DOMContentLoaded', () => {
+    loadState();
+    
+    // Ensure default items if none loaded
+    if (planillaSpec.items.length === 0) {
+        planillaSpec.items.push(makeEmptyItem('PC', 'egreso'));
+    }
+    
+    initializeFormElements();
+});
+</script>
+</body>
+</html>

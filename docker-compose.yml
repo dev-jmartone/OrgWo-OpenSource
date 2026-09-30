@@ -1,0 +1,22 @@
+services:
+  orgwo:
+    build: .
+    container_name: orgwo_app
+    restart: unless-stopped
+    ports:
+      # Solo loopback del host: no se expone a la red corporativa.
+      - "127.0.0.1:5000:5000"
+    environment:
+      - ENV=PROD
+      - REMEDY_MOCK_MODE=true
+      # Dentro del contenedor el server bindea a todas las interfaces para que
+      # el port-mapping funcione; la exposicion la limita el "127.0.0.1:" de arriba.
+      - HOST=0.0.0.0
+      # FLASK_SECRET_KEY: no se hardcodea. config.py genera/persiste .flask_secret.
+      # Para que sobreviva al recreate del contenedor, montar .flask_secret o
+      # setearla via env_file (no versionado).
+    volumes:
+      - ./database:/app/database
+      - ./attachments:/app/attachments
+      - ./backups:/app/backups
+      - ./Backend/inbox_scans:/app/Backend/inbox_scans

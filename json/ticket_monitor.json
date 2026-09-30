@@ -1,0 +1,68 @@
+{
+  "_comentario": "Ejemplo de Ticket con Tipificación 'Monitor' (Pantallas, monitores auxiliares, cables HDMI/DisplayPort)",
+  "origen_remedy": {
+    "formulario_remedy": "HPD:Help Desk",
+    "endpoint_api": "/api/arsys/v1/entry/HPD:Help Desk",
+    "tipo_ticket": "INC",
+    "grupo_asignado": "SOPORTE TECNICO CAMPO"
+  },
+  "remedy_raw_api_values": {
+    "Incident Number": "INC000001094520",
+    "Description": "Monitor parpadea continuamente y no da video por puerto HDMI. Se probó cable alternativo sin éxito. Requiere cambio de pantalla.",
+    "Detailed Decription": "Reportado por usuario presencial en sede Central.\nPara el usuario: Rodrigo Sebastian Martinez\nLegajo: 78921\nEmail: rmartinez@empresa.com\nEquipo: NBK-Empresa Principal-11204\nFalla: El monitor Dell de 24 pulgadas parpadea en negro intermitentemente al conectar a la dock y directamente por HDMI. Solicita recambio por monitor operativo en Piso 2.",
+    "Submit Date": "2024-04-18T10:15:30.000+0000",
+    "Last Modified Date": "2024-04-19T14:40:12.000+0000",
+    "Status": "Closed",
+    "Status_Reason": "Finalizado Satisfactoriamente",
+    "Priority": "Medium",
+    "First_Name": "Rodrigo Sebastian",
+    "Last_Name": "Martinez",
+    "Submitter": "jarvis",
+    "Reported Source": "Self Service / Jarvis",
+    "Assigned Group": "SOPORTE TECNICO CAMPO",
+    "Company": "EMPRESA",
+    "Site": "Sede Patricios",
+    "Resolution": "Se reemplazó monitor defectuoso por unidad operativa Dell P2419H serie #CN0981723. Probado con éxito en puesto de trabajo."
+  },
+  "registro_almacenado_en_base_datos": {
+    "case_id": "INC000001094520",
+    "ticket_type": "INC",
+    "summary": "Monitor parpadea continuamente y no da video por puerto HDMI. Se probó cable alternativo sin éxito. Requiere cambio de pantalla.",
+    "description": "Reportado por usuario presencial en sede Central. Para el usuario: Rodrigo Sebastian Martinez Legajo: 78921 Email: rmartinez@empresa.com...",
+    "submit_date": "2024-04-18 10:15:30",
+    "submit_month": "2024-04",
+    "last_modified_date": "2024-04-19 14:40:12",
+    "status": "Closed",
+    "priority": "Medium",
+    "submitter": "jarvis",
+    "client_name": "Rodrigo Sebastian Martinez",
+    "client_email": "rmartinez@empresa.com",
+    "client_domain": "empresa.com",
+    "company": "Empresa Principal",
+    "element": "Monitor",
+    "assigned_group": "SOPORTE TECNICO CAMPO",
+    "is_jarvis": 1,
+    "source_channel": "Jarvis"
+  },
+  "pipeline_como_se_obtuvo_la_informacion": {
+    "1_deteccion_jarvis": {
+      "regla": "Submitter == 'jarvis' o Reported Source contiene 'jarvis' o texto contiene 'para el usuario:'",
+      "resultado": "is_jarvis = 1, source_channel = 'Jarvis'"
+    },
+    "2_extraccion_usuario_real": {
+      "metodo": "Regex r'para el usuario:\\s*([^)\\r\\n.,;]+)' aplicado sobre Detailed Decription",
+      "coincidencia_encontrada": "Rodrigo Sebastian Martinez",
+      "resultado": "client_name = 'Rodrigo Sebastian Martinez' (reemplaza 'jarvis')"
+    },
+    "3_extraccion_correo_y_empresa": {
+      "correo_regex": "rmartinez@empresa.com",
+      "dominio_extraido": "empresa.com",
+      "clasificacion_empresa": "El dominio '@empresa.com' y el campo Company 'EMPRESA' clasifican el caso estrictamente como 'Empresa Principal'"
+    },
+    "4_clasificacion_tipificacion_elemento": {
+      "palabras_clave_evaluadas": ["monitor", "pantalla", "display", "hdmi", "displayport"],
+      "patron_detectado": "Palabra 'Monitor' y 'pantalla' encontradas en Summary y Description",
+      "resultado": "element = 'Monitor'"
+    }
+  }
+}

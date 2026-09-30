@@ -1,0 +1,83 @@
+{
+  "_comentario": "Ejemplo de ticket tipificado como 'Kit' (Teclado y Mouse / Periféricos).",
+  "tipificacion_elemento": "Kit",
+  "origen_remedy": {
+    "formulario": "WOI:WorkOrder",
+    "endpoint": "/api/arsys/v1/entry/WOI:WorkOrder",
+    "tipo_ticket": "WO",
+    "grupo_asignado": "TECNOLOGIA USUARIOS DT"
+  },
+  "remedy_raw_api_values": {
+    "Work Order ID": "WO000001096732",
+    "Summary": "Solicitud de kit teclado y mouse inalámbrico para puesto de trabajo",
+    "Detailed Description": "Se solicita entrega de kit periféricos (teclado + mouse óptico inalámbrico Logitech) para puesto presencial. Solicitante: Gonzalo Alvarez (galvarez@empresa.com).",
+    "Submit Date": 1713441600,
+    "Last Modified Date": 1713528000,
+    "Status": "4",
+    "Customer First Name": "GONZALO",
+    "Customer Last Name": "ALVAREZ",
+    "Submitter": "galvarez",
+    "ASLOGID": "operador1",
+    "Support Group Name": "TECNOLOGIA USUARIOS DT",
+    "Company": "SUBSIDIARIA B",
+    "Next Target Date": 1713614400,
+    "SLM Status": "Within SLM",
+    "Categorization Tier 1": "Hardware",
+    "Categorization Tier 2": "Periféricos",
+    "Categorization Tier 3": "Kit Teclado y Mouse"
+  },
+  "registro_almacenado_en_base_datos": {
+    "id": "WO000001096732",
+    "ticket_type": "WO",
+    "group_name": "TECNOLOGIA USUARIOS DT",
+    "status_raw": "4",
+    "status_mapped": "4",
+    "status_nombre": "Resuelto / Cerrado",
+    "summary": "Solicitud de kit teclado y mouse inalámbrico para puesto de trabajo",
+    "description": "Se solicita entrega de kit periféricos (teclado + mouse óptico inalámbrico Logitech) para puesto presencial. Solicitante: Gonzalo Alvarez (galvarez@empresa.com).",
+    "client_name": "Gonzalo Alvarez",
+    "client_email": "galvarez@empresa.com",
+    "assignee_login": "operador1",
+    "assignee_name": "Operador de Soporte",
+    "remedy_company": "SUBSIDIARIA B",
+    "is_jarvis": 0,
+    "user_company": "Empresa Principal",
+    "element_type": "Kit",
+    "tipificacion": "Kit Teclado y Mouse",
+    "sla_status": "Within SLM",
+    "submit_date": "2026-04-18 12:00:00",
+    "submit_month": "2026-04",
+    "last_modified_date": "2026-04-19 12:00:00"
+  },
+  "pipeline_como_se_obtuvo_la_informacion": {
+    "1_deteccion_jarvis": {
+      "metodo": "Revisión de submitter ('galvarez'). Ticket ingresado por canal directo.",
+      "resultado_is_jarvis": 0
+    },
+    "2_extraccion_solicitante": {
+      "metodo": "Transformación smart_case_name('GONZALO ALVAREZ') -> 'Gonzalo Alvarez'.",
+      "nombre_crudo_remedy": "GONZALO ALVAREZ",
+      "nombre_normalizado": "Gonzalo Alvarez"
+    },
+    "3_extraccion_email_y_dominio": {
+      "metodo": "Regex detectó 'galvarez@empresa.com' en la descripción.",
+      "email_obtenido": "galvarez@empresa.com",
+      "dominio_extraido": "@empresa.com"
+    },
+    "4_resolucion_empresa_usuario": {
+      "regla": "El dominio @empresa.com y la empresa SUBSIDIARIA B se unifican bajo 'Empresa Principal' (Regla: SUBSIDIARIA B, PROVEEDOR, Empresa Principal -> Empresa Principal).",
+      "empresa_remedy_original": "SUBSIDIARIA B",
+      "empresa_final_asignada": "Empresa Principal"
+    },
+    "5_tipificacion_hardware": {
+      "regla": "Función parse_element_type() encuentra 'kit', 'teclado', 'mouse' e 'inalambrico'. Asigna 'Kit'.",
+      "tipificacion_elemento": "Kit",
+      "categorizacion_bmc": "Kit Teclado y Mouse (Tier 3)"
+    },
+    "6_normalizacion_tiempo": {
+      "fecha_origen_epoch": 1713441600,
+      "submit_month_generado": "2026-04",
+      "mes_etiqueta": "Abril 2026"
+    }
+  }
+}

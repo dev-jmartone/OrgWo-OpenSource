@@ -1,0 +1,84 @@
+{
+  "_comentario": "Ejemplo de ticket tipificado como 'Equipo' (Notebook / PC). Muestra cómo los datos crudos de Remedy se transforman en campos normalizados del sistema.",
+  "tipificacion_elemento": "Equipo",
+  "origen_remedy": {
+    "formulario": "HPD:Help Desk",
+    "endpoint": "/api/arsys/v1/entry/HPD:Help Desk",
+    "tipo_ticket": "INC",
+    "grupo_asignado": "TECNOLOGIA USUARIOS DT"
+  },
+  "remedy_raw_api_values": {
+    "Incident Number": "INC000004128951",
+    "Description": "Cambio de notebook por fallas de disco y lentitud general",
+    "Detailed Decription": "JARVIS (Chatbot) - para el usuario: Martin Alejandro Gomez (mgomez@subsidiaria.com). Consulta: El equipo se bloquea constantemente en el inicio. Se solicita reemplazo de Notebook corporativa.",
+    "Submit Date": 1713182400,
+    "Last Modified Date": 1713268800,
+    "Status": "4",
+    "First Name": "JARVIS",
+    "Last Name": "CHATBOT",
+    "Submitter": "JARVIS CHATBOT",
+    "Assignee Login ID": "operador1",
+    "Assignee": "Operador de Soporte",
+    "Assigned Group": "TECNOLOGIA USUARIOS DT",
+    "Company": "EMPRESA",
+    "Required Resolution DateTime": 1713355200,
+    "SLM Status": "Within SLM",
+    "Categorization Tier 1": "Hardware",
+    "Categorization Tier 2": "Microinformática",
+    "Categorization Tier 3": "Notebook"
+  },
+  "registro_almacenado_en_base_datos": {
+    "id": "INC000004128951",
+    "ticket_type": "INC",
+    "group_name": "TECNOLOGIA USUARIOS DT",
+    "status_raw": "4",
+    "status_mapped": "4",
+    "status_nombre": "Resuelto / Cerrado",
+    "summary": "Cambio de notebook por fallas de disco y lentitud general",
+    "description": "El equipo se bloquea constantemente en el inicio. Se solicita reemplazo de Notebook corporativa.",
+    "client_name": "Martin Alejandro Gomez",
+    "client_email": "mgomez@subsidiaria.com",
+    "assignee_login": "operador1",
+    "assignee_name": "Operador de Soporte",
+    "remedy_company": "EMPRESA",
+    "is_jarvis": 1,
+    "user_company": "Subsidiaria",
+    "element_type": "Equipo",
+    "tipificacion": "Notebook",
+    "sla_status": "Within SLM",
+    "submit_date": "2026-04-15 12:00:00",
+    "submit_month": "2026-04",
+    "last_modified_date": "2026-04-16 12:00:00"
+  },
+  "pipeline_como_se_obtuvo_la_informacion": {
+    "1_deteccion_jarvis": {
+      "metodo": "Revisión de submitter ('JARVIS CHATBOT') y presencia de 'para el usuario:' en Detailed Decription.",
+      "resultado_is_jarvis": 1
+    },
+    "2_extraccion_solicitante": {
+      "metodo": "Regex 'para el usuario:\\s*([^)\\r\\n.,;]+)' aplicado sobre Detailed Decription.",
+      "texto_crudo_remedy": "First Name: JARVIS, Last Name: CHATBOT",
+      "nombre_real_extraido": "Martin Alejandro Gomez"
+    },
+    "3_extraccion_email_y_dominio": {
+      "metodo": "Regex '[\\w\\.-]+@[\\w\\.-]+\\.\\w+' sobre la descripción. Coincidencia directa con '@subsidiaria.com'.",
+      "email_obtenido": "mgomez@subsidiaria.com",
+      "dominio_extraido": "@subsidiaria.com"
+    },
+    "4_resolucion_empresa_usuario": {
+      "regla": "Precedencia 1: Dominio del correo electrónico extraído (@subsidiaria.com).",
+      "empresa_remedy_original": "EMPRESA (Genérica del bot)",
+      "empresa_final_asignada": "Subsidiaria"
+    },
+    "5_tipificacion_hardware": {
+      "regla": "Función parse_element_type() busca palabras clave en summary + description. Encontró 'notebook' y 'equipo'.",
+      "tipificacion_elemento": "Equipo",
+      "categorizacion_bmc": "Notebook (Tier 3)"
+    },
+    "6_normalizacion_tiempo": {
+      "fecha_origen_epoch": 1713182400,
+      "submit_month_generado": "2026-04",
+      "mes_etiqueta": "Abril 2026"
+    }
+  }
+}
